@@ -1,0 +1,102 @@
+name: Minecraft 1.21.11 - build and tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.loader }} / ${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        loader: [fabric, neoforge, forge]
+        profile: [minimum, current]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install game JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install build JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Build and run unit tests
+        shell: bash
+        run: |
+          chmod +x gradlew
+          overrides=()
+          if [[ '${{ matrix.profile }}' == minimum ]]; then
+            case '${{ matrix.loader }}' in
+              fabric) overrides+=(-Pfabric_loader_version=0.18.1) ;;
+              neoforge) overrides+=(-Pneo_version=21.11.0-beta) ;;
+              forge) overrides+=(-Pforge_version=61.0.0) ;;
+            esac
+          fi
+          ./gradlew ':1.21.11-${{ matrix.loader }}:build' --stacktrace --console=plain \
+            -Porg.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64 "${overrides[@]}"
+          python3 scripts/verify_artifact.py '${{ matrix.loader }}'
+      - name: Upload installable JAR and sources
+        if: matrix.profile == 'current'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Chested-Companions-Revived-1.0.0-mc1.21.11-${{ matrix.loader }}
+          path: versions/1.21.11-${{ matrix.loader }}/build/libs/*.jar
+          if-no-files-found: error
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-${{ matrix.loader }}-${{ matrix.profile }}
+          path: |
+            versions/1.21.11-${{ matrix.loader }}/build/reports/tests/
+            versions/1.21.11-${{ matrix.loader }}/build/test-results/
+          if-no-files-found: ignore
+
+  hidden-client:
+    name: Hidden Fabric client / ${{ matrix.optional }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        optional: [without-optional-mods, with-optional-mods]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Start invisible client and verify loading
+        shell: bash
+        run: |
+          chmod +x gradlew
+          optional=()
+          if [[ '${{ matrix.optional }}' == with-optional-mods ]]; then optional+=(-PwithOptionalMods); fi
+          set -o pipefail
+          xvfb-run -a ./gradlew :1.21.11-fabric:runSmokeClient --console=plain "${optional[@]}" | tee client-smoke.log
+          grep -q 'REVIVED_CLIENT_SMOKE_PASSED' client-smoke.log
+      - name: Upload client diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hidden-client-${{ matrix.optional }}
+          path: |
+            client-smoke.log
+            run/smoke-fabric/logs/
+          if-no-files-found: ignore

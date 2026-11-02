@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "revived_smoke",
+  "version": "1.0.0",
+  "name": "Revived development smoke tests",
+  "environment": "client",
+  "mixins": ["revived-smoke.mixins.json"],
+  "depends": {"chestedcompanions_revived": "*"}
+}

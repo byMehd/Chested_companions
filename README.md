@@ -1,0 +1,63 @@
+# Chested Companions: Revived
+
+Independent continuation of **Chested Companions** by [Khajiitos](https://github.com/Khajiitos/ChestedCompanions), targeting **Minecraft 1.21.11** on **Fabric, NeoForge and Forge**. Built with **Stonecutter 0.9.8** from shared Java sources.
+
+Original code, artwork and translations are distributed under the original [MIT license](LICENSE). See [NOTICE.md](NOTICE.md) for attribution. This project is not an official update by Khajiitos.
+
+## Features
+
+- Equip tamed cats and wolves with chests; preserve the equipped item and its components.
+- Configure ordinary inventories to 9, 18 or 27 slots independently for cats and wolves.
+- Owner-only access by default; optional public access, inverted crouch interaction, feeding priority, baby restrictions and per-animal toggles.
+- Remove a chest with shears; ordinary contents drop on removal and death.
+- **Ender chests:** access the opening player's actual vanilla Ender inventory (27 slots). Public access still shows each viewer their own inventory. Ender contents never belong to the pet and do not drop when it dies or loses its chest.
+- Preserve all eleven original **More Chest Variants** textures and add pale oak support through the installed mod's texture.
+- Optional Cloth Config screens and Fabric Mod Menu integration; optional chest icons and hiding chest models.
+- Preserve original entity save keys and datapack/resource namespaces. Import a legacy `chestedcompanions.json` without modifying it.
+
+The mod is required on both client and server. Install exactly one JAR matching your loader. Replace the original mod; do not install both together. Existing worlds should be backed up before moving between Minecraft versions.
+
+## Dependencies
+
+| Platform | Declared range for Minecraft 1.21.11 | Required extra API |
+| --- | --- | --- |
+| Fabric | Loader 0.18.1 and newer | **None: Fabric API is not required** |
+| NeoForge | 21.11 family, including beta builds | None |
+| Forge | 61.x | None |
+
+Builds use pinned versions in `gradle.properties`. The CI also checks the oldest declared versions. A range is not a guarantee about future loader releases; actual verification results are tracked in [docs/VALIDATION.md](docs/VALIDATION.md).
+
+Cloth Config and Mod Menu are optional. Their own dependencies apply if you install them. More Chest Variants currently provides 1.21.11 builds for Fabric and NeoForge; its original integration stays optional on Forge too. Cat Loaf has no published 1.21.11 build at the time of this port.
+
+## Build and test
+
+Use Java **25 for Gradle/build tools** and Java **21 for the Minecraft target and tests**. Both JDKs must be available to Gradle. The wrapper downloads Gradle 9.8.2.
+
+```powershell
+.\build.ps1
+.\build.ps1 :1.21.11-fabric:test
+.\build.ps1 :1.21.11-fabric:runSmokeClient
+.\build.ps1 :1.21.11-fabric:runSmokeClient -PwithOptionalMods
+```
+
+On Linux/macOS, use `./gradlew` with the same task names. `JAVA_HOME` should point to JDK 25; let Gradle detect JDK 21 or pass `-Porg.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64`.
+
+JARs are written to `versions/1.21.11-<loader>/build/libs/`. Files ending in `-sources.jar` are source archives, not installable mods. GitHub Actions uploads the three loader builds and test reports on every push and pull request.
+
+The smoke-test mod lives in a separate `smoke` source set and is excluded from release JARs. Its GLFW window is hidden before creation. Linux CI runs it under Xvfb.
+
+## Stonecutter
+
+`settings.gradle.kts` declares the Minecraft/loader variants. `stonecutter.gradle.kts` selects the active project and supplies loader constants. Shared logic and assets are in `src/main`; entrypoints and metadata are in `loaders/<loader>`. Each loader has its own build script.
+
+For example, select the NeoForge development variant with:
+
+```powershell
+.\build.ps1 'Set active project to 1.21.11-neoforge'
+```
+
+To add another Minecraft version, register its variants in `settings.gradle.kts`, supply matching dependency properties, and add Stonecutter version conditions only where APIs differ. Older original branches are preserved in the local upstream checkout; they are not advertised as new working ports.
+
+## Review and remaining compatibility work
+
+See [docs/AUDIT.md](docs/AUDIT.md) for upstream issues, confirmed defects and what remains unverified. The project deliberately distinguishes compilation, unit tests, hidden client startup and actual gameplay checks.

@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.khajiitos.chestedcompanions.common.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "accessor.CatModelAccessor",
+    "accessor.WolfModelAccessor",
+    "renderer.CatRendererMixin",
+    "renderer.WolfRendererMixin",
+    "renderstate.CatRenderStateMixin",
+    "renderstate.WolfRenderStateMixin"
+  ],
+  "mixins": [
+    "entity.CatMixin",
+    "entity.WolfMixin"
+  ]
+}

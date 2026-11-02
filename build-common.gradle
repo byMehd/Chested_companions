@@ -1,0 +1,44 @@
+apply plugin: 'java'
+group = 'me.khajiitos.chestedcompanions'
+version = mod_version + '+' + minecraft_version
+def loader = project.name.substring(project.name.lastIndexOf('-') + 1)
+base.archivesName = "chested-companions-revived-${loader}"
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+sourceSets.main.java.srcDir rootProject.file("loaders/${loader}/src/main/java")
+sourceSets.main.resources.srcDir rootProject.file("loaders/${loader}/src/main/resources")
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.shedaniel.me/' }
+    maven { url = 'https://maven.terraformersmc.com/releases/' }
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 21 }
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+}
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    workingDir = layout.buildDirectory.dir('test-work').get().asFile
+    doFirst { workingDir.mkdirs() }
+    testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat 'full' }
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        jvmArgs '-Djdk.net.unixdomain.tmpdir=C:\\invalid|path'
+    }
+}
+processResources {
+    def props = [version: project.version, minecraft_version: minecraft_version]
+    inputs.properties props
+    filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml', 'META-INF/mods.toml']) { expand props }
+}
+tasks.withType(Jar).configureEach {
+    from(rootProject.file('LICENSE'))
+    from(rootProject.file('NOTICE.md'))
+}
+jar {
+    manifest.attributes('Implementation-Title': 'Chested Companions: Revived', 'Implementation-Version': project.version)
+}

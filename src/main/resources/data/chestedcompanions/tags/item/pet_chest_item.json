@@ -1,0 +1,55 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:chest",
+    "minecraft:ender_chest",
+    {
+      "id": "lolmcv:oak_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:birch_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:spruce_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:jungle_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:dark_oak_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:acacia_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:mangrove_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:cherry_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:bamboo_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:crimson_chest",
+      "required": false
+    },
+    {
+      "id": "lolmcv:warped_chest",
+      "required": false
+    },
+    {
+      "required": false,
+      "id": "lolmcv:pale_oak_chest"
+    }
+  ]
+}

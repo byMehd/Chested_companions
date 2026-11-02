@@ -1,0 +1,17 @@
+plugins { id 'net.minecraftforge.gradle' version '7.0.40' }
+apply from: rootProject.file('build-common.gradle')
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    runs {
+        register('client') { workingDir = rootProject.layout.projectDirectory.dir('run/forge') }
+        register('server') { workingDir = rootProject.layout.projectDirectory.dir('run/forge-server'); args '--nogui' }
+    }
+}
+repositories { minecraft.mavenizer(it); maven fg.forgeMaven; maven fg.minecraftLibsMaven }
+dependencies {
+    implementation minecraft.dependency("net.minecraftforge:forge:${minecraft_version}-${forge_version}")
+    // Cloth no longer publishes Forge builds for 1.21.11. Compile its shared API only;
+    // the native settings screen remains available without installing Cloth.
+    compileOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
+}
+jar { manifest.attributes('MixinConfigs': 'chestedcompanions.mixins.json') }

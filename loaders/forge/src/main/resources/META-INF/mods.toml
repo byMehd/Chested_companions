@@ -1,0 +1,22 @@
+modLoader="javafml"
+loaderVersion="[61,)"
+license="MIT"
+[[mods]]
+modId="chestedcompanions_revived"
+version="${version}"
+displayName="Chested Companions: Revived"
+authors="Khajiitos (original mod), Chested Companions: Revived contributors"
+logoFile="icon.png"
+description="An independent continuation of Chested Companions. Equip chests on tamed cats and wolves."
+[[dependencies.chestedcompanions_revived]]
+modId="forge"
+mandatory=true
+versionRange="[61,62)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.chestedcompanions_revived]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.21.11,1.21.12)"
+ordering="NONE"
+side="BOTH"

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "chestedcompanions_revived",
+  "version": "${version}",
+  "name": "Chested Companions: Revived",
+  "description": "An independent continuation of Chested Companions. Equip chests on tamed cats and wolves.",
+  "authors": [
+    "Khajiitos (original mod)",
+    "Chested Companions: Revived contributors"
+  ],
+  "license": "MIT",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "me.khajiitos.chestedcompanions.fabric.ChestedCompanionsFabric"
+    ],
+    "modmenu": [
+      "me.khajiitos.chestedcompanions.fabric.client.ModMenuApiImpl"
+    ]
+  },
+  "mixins": [
+    "chestedcompanions.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "1.21.11",
+    "java": ">=21"
+  },
+  "suggests": {
+    "cloth-config": "*",
+    "modmenu": "*",
+    "lolmcv": "*"
+  },
+  "breaks": {
+    "chestedcompanions": "*"
+  }
+}
