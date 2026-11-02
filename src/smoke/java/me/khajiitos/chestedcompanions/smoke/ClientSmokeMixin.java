@@ -21,7 +21,7 @@ public class ClientSmokeMixin {
     @Inject(method = "tick", at = @At("TAIL"))
     private void checkClient(CallbackInfo ci) {
         Minecraft client = (Minecraft)(Object)this;
-        if (revived$finished || client.getOverlay() != null || client.screen == null) return;
+        if (revived$finished || !Boolean.getBoolean("revived.smoke") || client.getOverlay() != null || client.screen == null) return;
         if (++revived$ticks < 40) return;
         if (GLFW.glfwGetWindowAttrib(client.getWindow().handle(), GLFW.GLFW_VISIBLE) != GLFW.GLFW_FALSE)
             throw new AssertionError("Smoke-test client must remain hidden");
