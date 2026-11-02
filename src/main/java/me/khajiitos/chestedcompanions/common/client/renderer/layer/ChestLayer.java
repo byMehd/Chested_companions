@@ -29,9 +29,30 @@ import java.util.Set;
 public abstract class ChestLayer<T extends LivingEntityRenderState, M extends EntityModel<T>> extends RenderLayer<T, M> {
     protected static final float HALF_PI = (float)Math.PI / 2.f;
     private static final Identifier BASE_CHEST_LOCATION = Identifier.fromNamespaceAndPath("chestedcompanions", "textures/chest/chest.png");
+
+    private static @Nullable String copperTexture(ItemStack chestItem) {
+        Identifier item = BuiltInRegistries.ITEM.getKey(chestItem.getItem());
+        if (!item.getNamespace().equals("minecraft")) return null;
+        String path = item.getPath();
+        if (path.startsWith("waxed_")) path = path.substring("waxed_".length());
+        return switch (path) {
+            case "copper_chest" -> "copper";
+            case "exposed_copper_chest" -> "copper_exposed";
+            case "weathered_copper_chest" -> "copper_weathered";
+            case "oxidized_copper_chest" -> "copper_oxidized";
+            default -> null;
+        };
+    }
+
     private static Identifier getResourceLocation(@Nullable ItemStack chestItem) {
         if (chestItem == null || chestItem.isEmpty()) return BASE_CHEST_LOCATION;
-        if (chestItem.is(Items.ENDER_CHEST)) return Identifier.withDefaultNamespace("textures/entity/chest/ender.png");
+        if (chestItem.is(Items.ENDER_CHEST)) {
+            return Identifier.fromNamespaceAndPath("chestedcompanions", "textures/chest/special/ender.png");
+        }
+        String copperTexture = copperTexture(chestItem);
+        if (copperTexture != null) {
+            return Identifier.fromNamespaceAndPath("chestedcompanions", "textures/chest/special/" + copperTexture + ".png");
+        }
         Identifier item = BuiltInRegistries.ITEM.getKey(chestItem.getItem());
         if (item.getNamespace().equals("lolmcv") && item.getPath().equals("pale_oak_chest")) {
             return Identifier.fromNamespaceAndPath("lolmcv", "textures/entity/chest/pale_oak.png");
@@ -73,9 +94,11 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
 
         this.cubes = List.of(left, right);
         this.atlasCubes = List.of(
-                new ModelPart.Cube(0, 19, positionLeftChestCube.getX(), positionLeftChestCube.getY(), positionLeftChestCube.getZ(),
+                // Pale oak MCV retains a 64x64 vanilla-style chest atlas. Select
+                // its body/front area for these small side chests.
+                new ModelPart.Cube(33, 30, positionLeftChestCube.getX(), positionLeftChestCube.getY(), positionLeftChestCube.getZ(),
                         8, 8, 3, 1.f, 1.f, 1.f, false, 64, 64, Set.of(Direction.values())),
-                new ModelPart.Cube(0, 19, positionRightChestCube.getX(), positionRightChestCube.getY(), positionRightChestCube.getZ(),
+                new ModelPart.Cube(33, 30, positionRightChestCube.getX(), positionRightChestCube.getY(), positionRightChestCube.getZ(),
                         8, 8, 3, 1.f, 1.f, 1.f, true, 64, 64, Set.of(Direction.values())));
     }
 
@@ -96,7 +119,7 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
         this.getParentModel().setupAnim(renderState);
         ItemStack chest = chestEntityRenderState.chestedCompanions$getChestItemStack();
         Identifier item = BuiltInRegistries.ITEM.getKey(chest.getItem());
-        boolean atlas = chest.is(Items.ENDER_CHEST) || (item.getNamespace().equals("lolmcv") && item.getPath().equals("pale_oak_chest"));
+        boolean atlas = item.getNamespace().equals("lolmcv") && item.getPath().equals("pale_oak_chest");
         ModelPart part = new ModelPart(atlas ? this.atlasCubes : this.cubes, new HashMap<>());
         this.setupPosition(renderState, part);
         collector.submitModelPart(part, poseStack,

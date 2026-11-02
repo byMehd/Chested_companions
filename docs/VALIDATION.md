@@ -6,17 +6,18 @@ Local verification completed on 2 November 2026. CI provides per-run test report
 - Current pinned loaders: Fabric 0.20.1, NeoForge 21.11.48, Forge 61.2.4.
 - Minimum loader matrix: Fabric 0.17.3, NeoForge 21.11.0-beta, Forge 61.0.1.
 - Java bytecode target: 21. Gradle/Forge build tooling: Java 25.
-- Unit cases: configuration persistence/migration/invalid input, chest transfer/drop/invalidation/access, personal Ender inventory sharing and protection.
+- Unit cases: configuration persistence/migration/invalid input, chest transfer/drop/invalidation/access, personal Ender inventory sharing and protection, all eight vanilla copper chest items accepted by the pet chest tag.
 - Hidden Fabric client: tested locally without Fabric API; window remains invisible throughout creation and startup.
+- Five special saddlebag sprites (Ender plus four copper oxidation levels) are packaged at 22×11 pixels and checked by the smoke client and artifact verifier.
 
 | Check | Local result |
 | --- | --- |
-| Fabric 0.18.4 build | Passed; 15 unit tests |
+| Fabric 0.20.1 build | Passed; 15 unit tests |
 | Forge 61.2.4 build | Passed; 15 unit tests |
 | NeoForge 21.11.48 build | Passed; 19 tests including real mixed-in entity persistence, legacy migration and loaded item tags |
 | Hidden Fabric client without Fabric API | Passed |
 | Hidden Fabric client with Cloth Config, Mod Menu and Fabric API | Passed; configuration screen constructed and initialized |
-| Release archive metadata, optional tags and original textures | Passed for all three loaders |
+| Release metadata, copper/Ender saddlebag sprites, optional tags and MCV textures | Passed for all three loaders |
 | More Chest Variants + Quad on NeoForge | Passed; all 19 tests, including all twelve optional chest variants |
 | More Chest Variants + Quad on hidden Fabric client | Passed; registered items and pale oak texture verified |
 

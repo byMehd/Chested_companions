@@ -39,6 +39,8 @@ Upstream [#7](https://github.com/Khajiitos/ChestedCompanions/issues/7) is alread
 
 [More Chest Variants](https://modrinth.com/mod/more-chest-variants-lieonlion) publishes 1.21.11 Fabric and NeoForge builds. Original optional item-tag entries and all eleven custom textures are retained; pale oak is added using its existing standard chest texture. Missing mods do not prevent startup. [Cat Loaf](https://modrinth.com/mod/cat-loaf) currently stops at 1.21.3; its original pose handling remains, without declaring an unsupported binary dependency.
 
+Minecraft 1.21.11 also includes eight vanilla copper chest items. They are accepted as pet chests. The four oxidation-state visuals use compact 22×11 saddlebag textures; waxed items retain the matching oxidation-state appearance, as in vanilla.
+
 ## Forge and NeoForge packaging
 
 Separate artifacts are maintained. They use different entrypoints and different pet-sync implementations: native attachments on NeoForge and tracked entity data on Forge/Fabric. Simply merging these JARs would collide on the differently compiled mixin classes. Both artifacts compile the same shared source using Stonecutter conditions. A universal bootstrap and selective mixin loading could be investigated separately; no unverified combined artifact is advertised.

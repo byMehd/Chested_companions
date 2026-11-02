@@ -28,6 +28,13 @@ class EntityPersistenceTest {
         var tag = me.khajiitos.chestedcompanions.common.ChestedCompanions.PET_CHEST_ITEM;
         assertTrue(new ItemStack(Items.CHEST).is(tag));
         assertTrue(new ItemStack(Items.ENDER_CHEST).is(tag));
+        for (String variant : java.util.List.of("copper", "exposed_copper", "weathered_copper", "oxidized_copper",
+                "waxed_copper", "waxed_exposed_copper", "waxed_weathered_copper", "waxed_oxidized_copper")) {
+            var id = net.minecraft.resources.Identifier.withDefaultNamespace(variant + "_chest");
+            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
+            assertNotEquals(Items.AIR, item, "Missing vanilla copper chest item " + id);
+            assertTrue(new ItemStack(item).is(tag), "Copper chest rejected by pet tag: " + id);
+        }
         if (net.neoforged.fml.ModList.get().isLoaded("lolmcv")) {
             for (String wood : java.util.List.of("oak", "birch", "spruce", "jungle", "dark_oak", "acacia",
                     "mangrove", "cherry", "bamboo", "crimson", "warped", "pale_oak")) {

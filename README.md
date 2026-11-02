@@ -7,10 +7,11 @@ Original code, artwork and translations are distributed under the original [MIT 
 ## Features
 
 - Equip tamed cats and wolves with chests; preserve the equipped item and its components.
+- Equip any of the eight vanilla copper chest variants, from fresh copper through oxidized and waxed states; the pet uses a compact matching saddlebag texture.
 - Configure ordinary inventories to 9, 18 or 27 slots independently for cats and wolves.
 - Owner-only access by default; optional public access, inverted crouch interaction, feeding priority, baby restrictions and per-animal toggles.
 - Remove a chest with shears; ordinary contents drop on removal and death.
-- **Ender chests:** access the opening player's actual vanilla Ender inventory (27 slots). Public access still shows each viewer their own inventory. Ender contents never belong to the pet and do not drop when it dies or loses its chest.
+- **Ender chests:** access the opening player's actual vanilla Ender inventory (27 slots). Public access still shows each viewer their own inventory. Ender contents never belong to the pet and do not drop when it dies or loses its chest. The pet displays a compact Ender saddlebag texture.
 - Preserve all eleven original **More Chest Variants** textures and add pale oak support through the installed mod's texture.
 - Optional Cloth Config screens and Fabric Mod Menu integration; optional chest icons and hiding chest models.
 - Preserve original entity save keys and datapack/resource namespaces. Import a legacy `chestedcompanions.json` without modifying it.

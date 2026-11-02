@@ -1,6 +1,7 @@
 """Validate release packaging, including absence of development smoke-test code."""
 from pathlib import Path
 import json
+import struct
 import sys
 import zipfile
 
@@ -24,6 +25,19 @@ with zipfile.ZipFile(jars[0]) as jar:
         assert any(name.startswith('META-INF/jars/fabric-api-base-') for name in names), 'The resource loader base dependency must also be bundled'
     tag = json.loads(jar.read('data/chestedcompanions/tags/item/pet_chest_item.json'))
     assert 'minecraft:ender_chest' in tag['values']
+    copper_variants = {
+        'minecraft:copper_chest', 'minecraft:exposed_copper_chest', 'minecraft:weathered_copper_chest',
+        'minecraft:oxidized_copper_chest', 'minecraft:waxed_copper_chest',
+        'minecraft:waxed_exposed_copper_chest', 'minecraft:waxed_weathered_copper_chest',
+        'minecraft:waxed_oxidized_copper_chest',
+    }
+    tag_ids = {value if isinstance(value, str) else value['id'] for value in tag['values']}
+    assert copper_variants.issubset(tag_ids), 'A vanilla copper chest variant is missing from the pet chest tag'
+    for texture in ('ender', 'copper', 'copper_exposed', 'copper_weathered', 'copper_oxidized'):
+        texture_path = f'assets/chestedcompanions/textures/chest/special/{texture}.png'
+        assert texture_path in names, f'Missing saddlebag texture: {texture}'
+        png = jar.read(texture_path)
+        assert png[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>II', png[16:24]) == (22, 11), f'Invalid sack texture dimensions: {texture}'
     variants = [value['id'] for value in tag['values'] if isinstance(value, dict)]
     assert len(variants) == 12 and all(value.startswith('lolmcv:') for value in variants)
     for wood in ('oak', 'birch', 'spruce', 'jungle', 'dark_oak', 'acacia', 'mangrove', 'cherry', 'bamboo', 'crimson', 'warped'):

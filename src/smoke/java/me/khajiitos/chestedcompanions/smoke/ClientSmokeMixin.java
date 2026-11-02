@@ -31,6 +31,11 @@ public class ClientSmokeMixin {
         var baseTexture = net.minecraft.resources.Identifier.fromNamespaceAndPath("chestedcompanions", "textures/chest/chest.png");
         if (client.getResourceManager().getResource(baseTexture).isEmpty())
             throw new AssertionError("The mod's assets were not loaded; client startup alone is insufficient");
+        for (String texture : java.util.List.of("ender", "copper", "copper_exposed", "copper_weathered", "copper_oxidized")) {
+            var sackTexture = net.minecraft.resources.Identifier.fromNamespaceAndPath("chestedcompanions", "textures/chest/special/" + texture + ".png");
+            if (client.getResourceManager().getResource(sackTexture).isEmpty())
+                throw new AssertionError("Missing special saddlebag texture " + sackTexture);
+        }
         var config = me.khajiitos.chestedcompanions.common.client.config.ConfigScreens.create(client.screen);
         if (config == null) throw new AssertionError("Configuration screen unavailable");
         config.init(client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
