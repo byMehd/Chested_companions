@@ -5,7 +5,7 @@ import me.khajiitos.chestedcompanions.common.util.PetChestState;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
-import net.minecraft.client.gui.components.ImageButton;
+import me.khajiitos.chestedcompanions.common.client.gui.PetRemoveChestButton;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -204,7 +204,7 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
 
         double[] button = context.computeOnClient(client -> {
             for (var child : client.screen.children()) {
-                if (child instanceof ImageButton image) {
+                if (child instanceof PetRemoveChestButton image) {
                     double scale = client.getWindow().getGuiScale();
                     return new double[]{(image.getX() + image.getWidth() / 2.0) * scale, (image.getY() + image.getHeight() / 2.0) * scale};
                 }

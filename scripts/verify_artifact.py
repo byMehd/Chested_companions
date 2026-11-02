@@ -18,10 +18,6 @@ with zipfile.ZipFile(jars[0]) as jar:
     for mixin in ('entity.TamableAnimalMixin', 'entity.LivingEntityMixin', 'golem.CopperGolemAiMixin', 'golem.CopperGolemMixin', 'golem.TransportItemsBetweenContainersMixin'):
         assert mixin in mixins['mixins'], f'Missing mixin: {mixin}'
     assert 'gui.AbstractContainerScreenMixin' in mixins['client'], 'Missing client mixin: gui.AbstractContainerScreenMixin'
-    for sprite in ('remove_chest', 'remove_chest_highlighted'):
-        sprite_path = f'assets/chestedcompanions/textures/gui/sprites/{sprite}.png'
-        assert sprite_path in names, f'Missing button sprite: {sprite}'
-        assert struct.unpack('>II', jar.read(sprite_path)[16:24]) == (12, 12), f'Invalid button sprite dimensions: {sprite}'
     for language in ('en_us', 'fr_fr', 'pl_pl'):
         assert f'assets/chestedcompanions/lang/{language}.json' in names, f'Missing translation: {language}'
     metadata = {'fabric': 'fabric.mod.json', 'neoforge': 'META-INF/neoforge.mods.toml', 'forge': 'META-INF/mods.toml'}[loader]
