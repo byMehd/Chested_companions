@@ -1,9 +1,11 @@
 package me.khajiitos.chestedcompanions.common.mixin.entity;
 
 import me.khajiitos.chestedcompanions.common.config.CCConfig;
+import me.khajiitos.chestedcompanions.common.golem.PetGolemFreezeGoal;
 import me.khajiitos.chestedcompanions.common.util.ChestEntityCommon;
 import me.khajiitos.chestedcompanions.common.util.IChestEntity;
 import me.khajiitos.chestedcompanions.common.util.InventoryCapacity;
+import me.khajiitos.chestedcompanions.common.util.PetChestState;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -42,6 +44,9 @@ public abstract class CatMixin extends TamableAnimal implements IChestEntity {
     @Unique
     protected PetChestContainer<?> chestedCompanions$inventory;
 
+    @Unique
+    private final PetChestState chestedCompanions$state = new PetChestState();
+
     protected CatMixin(EntityType<? extends TamableAnimal> $$0, Level $$1) {
         super($$0, $$1);
     }
@@ -64,6 +69,11 @@ public abstract class CatMixin extends TamableAnimal implements IChestEntity {
     @Override
     public PetChestContainer<?> chestedCompanions$getInventory() {
         return this.chestedCompanions$inventory;
+    }
+
+    @Override
+    public PetChestState chestedCompanions$getState() {
+        return this.chestedCompanions$state;
     }
 
     @Override
@@ -136,6 +146,16 @@ public abstract class CatMixin extends TamableAnimal implements IChestEntity {
     @Inject(at = @At("HEAD"), method = "mobInteract", cancellable = true)
     public void mobInteract(Player player, InteractionHand interactionHand, CallbackInfoReturnable<InteractionResult> cir) {
         ChestEntityCommon.mobInteract(this, player, interactionHand, cir);
+    }
+
+    @Inject(at = @At("TAIL"), method = "tick")
+    public void chestedCompanions$tick(CallbackInfo ci) {
+        ChestEntityCommon.tick(this);
+    }
+
+    @Inject(at = @At("TAIL"), method = "registerGoals")
+    public void chestedCompanions$registerGoals(CallbackInfo ci) {
+        this.goalSelector.addGoal(0, new PetGolemFreezeGoal<>(this));
     }
 
     @Override

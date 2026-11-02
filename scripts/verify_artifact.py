@@ -14,6 +14,11 @@ with zipfile.ZipFile(jars[0]) as jar:
     assert 'LICENSE' in names and 'NOTICE.md' in names
     assert not any('/smoke/' in name or 'revived-smoke' in name for name in names), 'Development tests leaked into release'
     assert 'chestedcompanions.mixins.json' in names
+    mixins = json.loads(jar.read('chestedcompanions.mixins.json'))
+    for mixin in ('entity.TamableAnimalMixin', 'golem.CopperGolemAiMixin', 'golem.CopperGolemMixin', 'golem.TransportItemsBetweenContainersMixin'):
+        assert mixin in mixins['mixins'], f'Missing mixin: {mixin}'
+    for language in ('en_us', 'fr_fr', 'pl_pl'):
+        assert f'assets/chestedcompanions/lang/{language}.json' in names, f'Missing translation: {language}'
     metadata = {'fabric': 'fabric.mod.json', 'neoforge': 'META-INF/neoforge.mods.toml', 'forge': 'META-INF/mods.toml'}[loader]
     assert metadata in names
     if loader == 'fabric':

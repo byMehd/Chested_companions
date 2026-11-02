@@ -16,6 +16,10 @@
   ],
   "mixins": [
     "entity.CatMixin",
-    "entity.WolfMixin"
+    "entity.TamableAnimalMixin",
+    "entity.WolfMixin",
+    "golem.CopperGolemAiMixin",
+    "golem.CopperGolemMixin",
+    "golem.TransportItemsBetweenContainersMixin"
   ]
 }

@@ -47,6 +47,7 @@ class InventoryTest {
         when(pet.isOwnedBy(player)).thenReturn(true);
         when(player.isWithinEntityInteractionRange(pet, 4.0)).thenReturn(true);
         when(pet.chestedCompanions$getInventory()).thenAnswer(i -> current.get());
+        when(pet.chestedCompanions$getState()).thenReturn(new me.khajiitos.chestedcompanions.common.util.PetChestState());
         when(pet.chestedCompanions$getChestItemStack()).thenAnswer(i -> chest.get());
         when(pet.chestedCompanions$hasChest()).thenAnswer(i -> !chest.get().isEmpty());
         when(pet.chestedCompanions$hasEnderChest()).thenAnswer(i -> chest.get().is(Items.ENDER_CHEST));

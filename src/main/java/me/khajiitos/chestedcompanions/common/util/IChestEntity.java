@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.ContainerUser;
 import net.minecraft.world.entity.HasCustomInventoryScreen;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
@@ -13,6 +14,8 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public interface IChestEntity extends HasCustomInventoryScreen, MenuProvider {
     InventoryCapacity chestedCompanions$getInventoryCapacity();
@@ -24,6 +27,7 @@ public interface IChestEntity extends HasCustomInventoryScreen, MenuProvider {
     void chestedCompanions$removeChestContent(boolean dropChest);
     boolean chestedCompanions$allowChest();
     boolean chestedCompanions$allowChestOnBaby();
+    PetChestState chestedCompanions$getState();
 
     default boolean chestedCompanions$hasChest() {
         return !this.chestedCompanions$getChestItemStack().isEmpty();
@@ -31,6 +35,10 @@ public interface IChestEntity extends HasCustomInventoryScreen, MenuProvider {
 
     default boolean chestedCompanions$hasEnderChest() {
         return this.chestedCompanions$getChestItemStack().is(net.minecraft.world.item.Items.ENDER_CHEST);
+    }
+
+    default boolean chestedCompanions$hasCopperChest() {
+        return PetCopperChest.isCopper(this.chestedCompanions$getChestItemStack());
     }
 
     default boolean chestedCompanions$isValidChestItem(ItemStack itemStack) {
@@ -75,6 +83,25 @@ public interface IChestEntity extends HasCustomInventoryScreen, MenuProvider {
                 return;
             }
             this.setItem(itemStackWithSlot.slot(), itemStackWithSlot.stack());
+        }
+
+        public T getPet() {
+            return this.pet;
+        }
+
+        @Override
+        public void startOpen(@NotNull ContainerUser user) {
+            this.pet.chestedCompanions$getState().open(this.pet, user);
+        }
+
+        @Override
+        public void stopOpen(@NotNull ContainerUser user) {
+            this.pet.chestedCompanions$getState().close(this.pet, user);
+        }
+
+        @Override
+        public @NotNull List<ContainerUser> getEntitiesWithContainerOpen() {
+            return this.pet.chestedCompanions$getState().openers();
         }
 
         @Override

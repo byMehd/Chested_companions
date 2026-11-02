@@ -8,9 +8,12 @@ Original code, artwork and translations are distributed under the original [MIT 
 
 - Equip tamed cats and wolves with chests; preserve the equipped item and its components.
 - Equip any of the eight vanilla copper chest variants, from fresh copper through oxidized and waxed states; the pet uses a compact matching saddlebag texture.
+- **Copper chests age like placed ones.** They oxidize at the same pace as a placed copper chest (the `randomTickSpeed` game rule applies), honeycomb waxes them so they stop, and an axe scrapes one oxidation stage or removes the wax, exactly like on a block. Contents are never touched.
+- **Chests open like vanilla chests.** Opening a pet's chest plays the real open and close sound of its type (wooden, Ender or each copper stage), and the saddlebag lids swing open and shut. The wooden-bag geometry and textures are unchanged while the lid is shut, so existing texture packs keep working.
+- **Copper golems use pet chests.** A copper golem near a pet wearing a copper chest walks up, opens the chest with the same animation and sound it uses at a placed copper chest, and carries one stack of up to 16 items away to a chest, as it does from a copper chest block. The pet stands still for the visit. Disable with `copperGolemsUsePetChests`.
 - Configure ordinary inventories to 9, 18 or 27 slots independently for cats and wolves.
 - Owner-only access by default; optional public access, inverted crouch interaction, feeding priority, baby restrictions and per-animal toggles.
-- Remove a chest with shears; ordinary contents drop on removal and death.
+- Remove a chest with shears (right-click the pet); ordinary contents drop on removal and death, exactly once.
 - **Ender chests:** access the opening player's actual vanilla Ender inventory (27 slots). Public access still shows each viewer their own inventory. Ender contents never belong to the pet and do not drop when it dies or loses its chest. The pet displays a compact Ender saddlebag texture.
 - Preserve all eleven original **More Chest Variants** textures and add pale oak support through the installed mod's texture.
 - Optional Cloth Config screens and Fabric Mod Menu integration; optional chest icons and hiding chest models.
@@ -45,7 +48,7 @@ On Linux/macOS, use `./gradlew` with the same task names. `JAVA_HOME` should poi
 
 JARs are written to `versions/1.21.11-<loader>/build/libs/`. Files ending in `-sources.jar` are source archives, not installable mods. GitHub Actions uploads the three loader builds and test reports on every push and pull request.
 
-The smoke-test mod lives in a separate `smoke` source set and is excluded from release JARs. Its GLFW window is hidden before creation. Linux CI runs it under Xvfb.
+The smoke-test mod lives in a separate `smoke` source set and is excluded from release JARs. Its GLFW window is hidden before creation. Linux CI runs it under Xvfb. `runSmokeServer` starts a real dedicated server on a throw-away flat world and plays whole scenarios on it: a copper golem emptying a cat's copper chest into a placed chest, copper chest oxidation and waxing, and chest removal and death drops, failing on the first duplicated or lost item.
 
 ## Stonecutter
 

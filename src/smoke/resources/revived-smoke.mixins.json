@@ -3,5 +3,6 @@
   "package": "me.khajiitos.chestedcompanions.smoke",
   "compatibilityLevel": "JAVA_21",
   "client": ["HiddenWindowMixin", "ClientSmokeMixin"],
+  "mixins": ["ServerSmokeMixin"],
   "injectors": {"defaultRequire": 1}
 }

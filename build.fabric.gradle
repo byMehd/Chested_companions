@@ -40,5 +40,26 @@ loom {
             runDir '../../run/smoke-fabric'
             vmArg '-Drevived.smoke=true'
         }
+        smokeServer {
+            server()
+            source sourceSets.smoke
+            runDir '../../run/smoke-fabric-server'
+            vmArg '-Drevived.smoke.server=true'
+            programArg '--nogui'
+        }
+    }
+}
+// A throw-away flat world with no mob spawning, so the scenarios play out on a quiet, predictable ground.
+tasks.matching { it.name == 'runSmokeServer' }.configureEach {
+    doFirst {
+        def runDirectory = rootProject.file('run/smoke-fabric-server')
+        runDirectory.mkdirs()
+        new File(runDirectory, 'eula.txt').text = 'eula=true' + System.lineSeparator()
+        new File(runDirectory, 'server.properties').text = [
+                'level-type=minecraft:flat', 'online-mode=false', 'spawn-monsters=false', 'spawn-animals=false',
+                'spawn-npcs=false', 'view-distance=4', 'simulation-distance=4', 'max-tick-time=-1',
+                'pause-when-empty-seconds=-1'
+        ].join(System.lineSeparator()) + System.lineSeparator()
+        project.delete(new File(runDirectory, 'world'))
     }
 }

@@ -45,5 +45,8 @@
   "chestedcompanions.config.showChestIconOnWolves.description": "Wyświetla ikonę skrzyni nad wilkiem, opcję można użyć jeśli model skrzyni nie może być wyświetlony",
 
   "chestedcompanions.config.feedingOverridesOpeningChest.name": "Karmienie nadpisuje otwieranie skrzyni",
-  "chestedcompanions.config.feedingOverridesOpeningChest.description": "Karmienie zwierzęcia ma wyższy priorytet niż otworzenie skrzyni"
+  "chestedcompanions.config.feedingOverridesOpeningChest.description": "Karmienie zwierzęcia ma wyższy priorytet niż otworzenie skrzyni",
+
+  "chestedcompanions.config.copperGolemsUsePetChests.name": "Miedziane golemy korzystają ze skrzyń zwierząt",
+  "chestedcompanions.config.copperGolemsUsePetChests.description": "Miedziane golemy zabierają przedmioty z miedzianej skrzyni założonej na pobliskim zwierzęciu, tak jak z postawionej miedzianej skrzyni"
 }

@@ -36,7 +36,7 @@ public class ChestEntityCommon {
 
                     chestEntity.chestedCompanions$removeChestContent(!player.getAbilities().instabuild);
                     chestEntity.playSound(SoundEvents.DONKEY_CHEST, 1.0F, 1.5F);
-                } else {
+                } else if (!PetCopperChest.tryUse(chestEntity, player, interactionHand, inHand)) {
                     chestEntity.openCustomInventoryScreen(player);
                 }
                 cir.setReturnValue(InteractionResult.SUCCESS_SERVER);
@@ -102,6 +102,7 @@ public class ChestEntityCommon {
         // Invalidate open menus before spawning anything; callbacks must see an empty pet.
         chestEntity.chestedCompanions$setChestItemStack(ItemStack.EMPTY);
         chestEntity.chestedCompanions$removeInventory();
+        chestEntity.chestedCompanions$getState().reset(chestEntity);
         if (inventory != null) {
             for (int i = 0; i < inventory.getContainerSize(); i++) {
                 ItemStack stack = inventory.removeItemNoUpdate(i);
@@ -112,6 +113,19 @@ public class ChestEntityCommon {
         }
         if (dropChest && !chest.isEmpty()) {
             chestEntity.spawnAtLocation(serverLevel, chest, 0.25f);
+        }
+    }
+
+    /** Server: ages a copper chest and rechecks who has the chest open. Client: advances the lid animation. */
+    public static <T extends TamableAnimal & IChestEntity> void tick(T chestEntity) {
+        PetChestState state = chestEntity.chestedCompanions$getState();
+        if (chestEntity.level() instanceof ServerLevel serverLevel) {
+            if (chestEntity.isAlive() && chestEntity.chestedCompanions$hasChest()) {
+                PetCopperChest.tickAging(chestEntity, serverLevel);
+                state.serverTick(chestEntity);
+            }
+        } else {
+            state.tickLid();
         }
     }
 
