@@ -20,6 +20,8 @@ with zipfile.ZipFile(jars[0]) as jar:
         assert mod['id'] == 'chestedcompanions_revived'
         assert mod['name'] == 'Chested Companions: Revived'
         assert 'fabric-api' not in mod['depends'], 'Core mod must work without Fabric API'
+        assert any(name.startswith('META-INF/jars/fabric-resource-loader-v1-') for name in names), 'Standalone resource loader must be bundled'
+        assert any(name.startswith('META-INF/jars/fabric-api-base-') for name in names), 'The resource loader base dependency must also be bundled'
     tag = json.loads(jar.read('data/chestedcompanions/tags/item/pet_chest_item.json'))
     assert 'minecraft:ender_chest' in tag['values']
     variants = [value['id'] for value in tag['values'] if isinstance(value, dict)]

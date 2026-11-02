@@ -15,6 +15,10 @@ neoForge {
 dependencies {
     testImplementation "net.neoforged:testframework:${neo_version}"
     compileOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
-    if (project.hasProperty('withOptionalMods')) { runtimeOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}" }
+    if (project.hasProperty('withOptionalMods')) {
+        runtimeOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
+        runtimeOnly 'maven.modrinth:HKKqmr2p:6UmR3cPp'
+        runtimeOnly 'maven.modrinth:7jzrCiK0:yCBebvg9'
+    }
 }
 sourceSets.test.java.srcDir rootProject.file('loaders/neoforge/src/test/java')

@@ -21,13 +21,13 @@ The mod is required on both client and server. Install exactly one JAR matching 
 
 | Platform | Declared range for Minecraft 1.21.11 | Required extra API |
 | --- | --- | --- |
-| Fabric | Loader 0.18.1 and newer | **None: Fabric API is not required** |
+| Fabric | Loader 0.17.3 and newer | **No separate API download**; the small resource-loader module and its base are bundled |
 | NeoForge | 21.11 family, including beta builds | None |
-| Forge | 61.x | None |
+| Forge | 61.0.1 through 61.x | None |
 
 Builds use pinned versions in `gradle.properties`. The CI also checks the oldest declared versions. A range is not a guarantee about future loader releases; actual verification results are tracked in [docs/VALIDATION.md](docs/VALIDATION.md).
 
-Cloth Config and Mod Menu are optional. Their own dependencies apply if you install them. More Chest Variants currently provides 1.21.11 builds for Fabric and NeoForge; its original integration stays optional on Forge too. Cat Loaf has no published 1.21.11 build at the time of this port.
+Cloth Config and Mod Menu are optional. A native settings screen is available if Cloth Config is absent; Fabric exposes it through Mod Menu. Their own dependencies apply if you install them. More Chest Variants currently provides 1.21.11 builds for Fabric and NeoForge; its original integration stays optional on Forge too. Cat Loaf has no published 1.21.11 build at the time of this port.
 
 ## Build and test
 

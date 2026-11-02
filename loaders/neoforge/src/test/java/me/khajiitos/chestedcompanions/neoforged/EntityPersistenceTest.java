@@ -24,6 +24,21 @@ import static org.mockito.Mockito.*;
 /** Real mixins and codecs, with a registry-only ephemeral server; no world chunks are modified. */
 @ExtendWith(EphemeralTestServerProvider.class)
 class EntityPersistenceTest {
+    @Test void chestTagContainsVanillaEnderAndEveryInstalledVariant(MinecraftServer server) {
+        var tag = me.khajiitos.chestedcompanions.common.ChestedCompanions.PET_CHEST_ITEM;
+        assertTrue(new ItemStack(Items.CHEST).is(tag));
+        assertTrue(new ItemStack(Items.ENDER_CHEST).is(tag));
+        if (net.neoforged.fml.ModList.get().isLoaded("lolmcv")) {
+            for (String wood : java.util.List.of("oak", "birch", "spruce", "jungle", "dark_oak", "acacia",
+                    "mangrove", "cherry", "bamboo", "crimson", "warped", "pale_oak")) {
+                var id = net.minecraft.resources.Identifier.fromNamespaceAndPath("lolmcv", wood + "_chest");
+                var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(id);
+                assertNotEquals(Items.AIR, item, "Missing registered MCV item " + id);
+                assertTrue(new ItemStack(item).is(tag), "MCV chest rejected by pet tag: " + id);
+            }
+        }
+    }
+
     private TamableAnimal create(EntityType<? extends TamableAnimal> type, MinecraftServer server) {
         // The ephemeral server supplies registries, not a tickable world. Detached entities
         // use a minimal level and must never attempt chunk access or network tracking.
