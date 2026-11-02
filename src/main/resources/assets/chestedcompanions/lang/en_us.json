@@ -48,5 +48,8 @@
   "chestedcompanions.config.feedingOverridesOpeningChest.description": "Feeding the pet has higher priority than opening the chest",
 
   "chestedcompanions.config.copperGolemsUsePetChests.name": "Copper Golems Use Pet Chests",
-  "chestedcompanions.config.copperGolemsUsePetChests.description": "Copper golems take items from the copper chest a nearby pet wears, as they do from a placed copper chest"
+  "chestedcompanions.config.copperGolemsUsePetChests.description": "Copper golems take items from the copper chest a nearby pet wears, as they do from a placed copper chest",
+
+  "container.chestedcompanions.pet_chest": "%s",
+  "gui.chestedcompanions.remove_chest": "Remove chest\nThe chest and everything in it drop to the ground"
 }

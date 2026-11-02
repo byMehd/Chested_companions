@@ -150,13 +150,13 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6
-      - name: Photograph every chest type on a cat and a wolf, sitting and baby pets, and a golem visit
+      - name: Photograph every chest type on a cat and a wolf, sitting and baby pets, a golem visit and the remove-chest button
         shell: bash
         run: |
           chmod +x gradlew
           set -o pipefail
           xvfb-run -a ./gradlew :1.21.11-fabric:runSmokeScreens -PwithGameTest --console=plain | tee screenshots.log
-          test "$(ls run/smoke-screens/screenshots/*.png | wc -l)" -eq 58
+          test "$(ls run/smoke-screens/screenshots/*.png | wc -l)" -eq 61
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v7

@@ -1,8 +1,8 @@
 package me.khajiitos.chestedcompanions.common.mixin.entity;
 
 import me.khajiitos.chestedcompanions.common.config.CCConfig;
-import me.khajiitos.chestedcompanions.common.golem.PetGolemFreezeGoal;
 import me.khajiitos.chestedcompanions.common.util.ChestEntityCommon;
+import me.khajiitos.chestedcompanions.common.util.PetMenuProvider;
 import me.khajiitos.chestedcompanions.common.util.IChestEntity;
 import me.khajiitos.chestedcompanions.common.util.InventoryCapacity;
 import me.khajiitos.chestedcompanions.common.util.PetChestState;
@@ -140,7 +140,7 @@ public abstract class CatMixin extends TamableAnimal implements IChestEntity {
     }
 
     public void openCustomInventoryScreen(Player player) {
-        player.openMenu(this);
+        player.openMenu(new PetMenuProvider<>(this));
     }
 
     @Inject(at = @At("HEAD"), method = "mobInteract", cancellable = true)
@@ -151,11 +151,6 @@ public abstract class CatMixin extends TamableAnimal implements IChestEntity {
     @Inject(at = @At("TAIL"), method = "tick")
     public void chestedCompanions$tick(CallbackInfo ci) {
         ChestEntityCommon.tick(this);
-    }
-
-    @Inject(at = @At("TAIL"), method = "registerGoals")
-    public void chestedCompanions$registerGoals(CallbackInfo ci) {
-        this.goalSelector.addGoal(0, new PetGolemFreezeGoal<>(this));
     }
 
     @Override

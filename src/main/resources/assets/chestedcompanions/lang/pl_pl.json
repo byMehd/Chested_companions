@@ -48,5 +48,8 @@
   "chestedcompanions.config.feedingOverridesOpeningChest.description": "Karmienie zwierzęcia ma wyższy priorytet niż otworzenie skrzyni",
 
   "chestedcompanions.config.copperGolemsUsePetChests.name": "Miedziane golemy korzystają ze skrzyń zwierząt",
-  "chestedcompanions.config.copperGolemsUsePetChests.description": "Miedziane golemy zabierają przedmioty z miedzianej skrzyni założonej na pobliskim zwierzęciu, tak jak z postawionej miedzianej skrzyni"
+  "chestedcompanions.config.copperGolemsUsePetChests.description": "Miedziane golemy zabierają przedmioty z miedzianej skrzyni założonej na pobliskim zwierzęciu, tak jak z postawionej miedzianej skrzyni",
+
+  "container.chestedcompanions.pet_chest": "%s",
+  "gui.chestedcompanions.remove_chest": "Zdejmij skrzynię\nSkrzynia i cała jej zawartość spadną na ziemię"
 }

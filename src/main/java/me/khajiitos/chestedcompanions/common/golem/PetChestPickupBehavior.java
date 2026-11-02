@@ -38,6 +38,7 @@ public final class PetChestPickupBehavior extends Behavior<CopperGolem> {
     private static final int SEARCH_INTERVAL = 40;
     private static final int MAX_TRAVEL_TICKS = 600;
     private static final long VISITED_MEMORY_TICKS = 6000L;
+    /** The reach vanilla uses at a placed chest once the golem has finished its path (one block), and how far it may drift while working. */
     private static final double START_RANGE = 1.0;
     private static final double CONTINUE_RANGE = 2.0;
     /** The pet is held still only once the golem is about to reach it, so a golem stuck behind a wall never pins a pet down. */

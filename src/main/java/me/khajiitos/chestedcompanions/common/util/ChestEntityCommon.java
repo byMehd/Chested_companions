@@ -11,7 +11,7 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.storage.ValueInput;
@@ -33,9 +33,7 @@ public class ChestEntityCommon {
                 ItemStack inHand = player.getItemInHand(interactionHand);
                 if (inHand.is(Items.SHEARS)) {
                     inHand.hurtAndBreak(1, player, interactionHand);
-
-                    chestEntity.chestedCompanions$removeChestContent(!player.getAbilities().instabuild);
-                    chestEntity.playSound(SoundEvents.DONKEY_CHEST, 1.0F, 1.5F);
+                    takeChestOff(chestEntity, player);
                 } else if (!PetCopperChest.tryUse(chestEntity, player, interactionHand, inHand)) {
                     chestEntity.openCustomInventoryScreen(player);
                 }
@@ -56,6 +54,21 @@ public class ChestEntityCommon {
                 }
             }
         }
+    }
+
+    /** Whether this player may take the chest off the pet right now, the way the pet's menu checks it. */
+    public static <T extends TamableAnimal & IChestEntity> boolean canTakeChestOff(T chestEntity, Player player) {
+        return chestEntity.isAlive() && chestEntity.chestedCompanions$hasChest() && canAccess(chestEntity, player)
+                && player.level() == chestEntity.level() && player.isWithinEntityInteractionRange(chestEntity, 4.0);
+    }
+
+    /**
+     * Takes the chest off the pet: the contents always drop, and so does the chest itself unless the player is in
+     * creative mode. Shears and the remove button of the pet's screen both end up here.
+     */
+    public static <T extends TamableAnimal & IChestEntity> void takeChestOff(T chestEntity, Player player) {
+        chestEntity.chestedCompanions$removeChestContent(!player.getAbilities().instabuild);
+        chestEntity.playSound(SoundEvents.DONKEY_CHEST, 1.0F, 1.5F);
     }
 
     public static <T extends TamableAnimal & IChestEntity> void addAdditionalSaveData(T chestEntity, ValueOutput valueOutput) {
@@ -136,7 +149,7 @@ public class ChestEntityCommon {
             return null;
         }
         if (chestEntity.chestedCompanions$hasEnderChest()) {
-            return ChestMenu.threeRows(i, inventory, new PetEnderChestContainer<>(chestEntity, player));
+            return new PetChestMenu<>(MenuType.GENERIC_9x3, i, inventory, new PetEnderChestContainer<>(chestEntity, player), 3, chestEntity);
         }
         InventoryCapacity inventoryCapacity = chestEntity.chestedCompanions$getInventoryCapacity();
 
@@ -145,6 +158,6 @@ public class ChestEntityCommon {
             chestEntity.chestedCompanions$createInventory();
         }
 
-        return new ChestMenu(inventoryCapacity.menuType, i, inventory, chestEntity.chestedCompanions$getInventory(), inventoryCapacity.containerRows);
+        return new PetChestMenu<>(inventoryCapacity.menuType, i, inventory, chestEntity.chestedCompanions$getInventory(), inventoryCapacity.containerRows, chestEntity);
     }
 }

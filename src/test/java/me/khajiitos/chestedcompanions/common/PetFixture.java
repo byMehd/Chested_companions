@@ -1,5 +1,6 @@
 package me.khajiitos.chestedcompanions.common;
 
+import me.khajiitos.chestedcompanions.common.util.ChestEntityCommon;
 import me.khajiitos.chestedcompanions.common.util.IChestEntity;
 import me.khajiitos.chestedcompanions.common.util.PetChestState;
 import net.minecraft.server.level.ServerLevel;
@@ -17,6 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -48,6 +50,7 @@ final class PetFixture {
         when(pet.chestedCompanions$hasEnderChest()).thenAnswer(i -> chest.get().is(net.minecraft.world.item.Items.ENDER_CHEST));
         when(pet.chestedCompanions$hasCopperChest()).thenAnswer(i -> me.khajiitos.chestedcompanions.common.util.PetCopperChest.isCopper(chest.get()));
         doAnswer(i -> { chest.set(i.getArgument(0)); return null; }).when(pet).chestedCompanions$setChestItemStack(any());
+        doAnswer(i -> { ChestEntityCommon.removeChestContent(pet, i.<Boolean>getArgument(0)); return null; }).when(pet).chestedCompanions$removeChestContent(anyBoolean());
         if (slots > 0) {
             inventory.set(new IChestEntity.PetChestContainer<>(pet, slots, null));
         }

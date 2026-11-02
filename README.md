@@ -9,12 +9,13 @@ Original code, artwork and translations are distributed under the original [MIT 
 - Equip tamed cats and wolves with chests; preserve the equipped item and its components.
 - Equip any of the eight vanilla copper chest variants, from fresh copper through oxidized and waxed states; the pet uses a compact matching saddlebag texture.
 - **Copper chests age like placed ones.** They oxidize at the same pace as a placed copper chest (the `randomTickSpeed` game rule applies), honeycomb waxes them so they stop, and an axe scrapes one oxidation stage or removes the wax, exactly like on a block. Contents are never touched.
-- **Chests open like vanilla chests.** Opening a pet's chest plays the real open and close sound of its type (wooden, Ender or each copper stage), and the saddlebag lids swing open and shut. The wooden-bag geometry and textures are unchanged while the lid is shut, so existing texture packs keep working.
-- **Copper golems use pet chests.** A copper golem near a pet wearing a copper chest walks up, opens the chest with the same animation and sound it uses at a placed copper chest, and carries one stack of up to 16 items away to a chest, as it does from a copper chest block. The pet stands still for the visit. Disable with `copperGolemsUsePetChests`.
+- **Chests open like vanilla chests.** Opening a pet's chest plays the real open and close sound of its type (wooden, Ender or each copper stage), and the saddlebag lids swing open and shut. The wooden-bag geometry and textures are unchanged while the lid is shut, so existing texture packs keep working. A pet whose chest is open, for you or for a golem, stays where it is, sitting or standing.
+- **Copper golems use pet chests.** A copper golem near a pet wearing a copper chest walks up, opens the chest with the same animation and sound it uses at a placed copper chest, and carries one stack of up to 16 items away to a chest, as it does from a copper chest block. It walks up to the pet the way it does to a placed chest, and the pet keeps its pose and does not move for the visit. Disable with `copperGolemsUsePetChests`.
 - Configure ordinary inventories to 9, 18 or 27 slots independently for cats and wolves.
 - Owner-only access by default; optional public access, inverted crouch interaction, feeding priority, baby restrictions and per-animal toggles.
-- Remove a chest with shears (right-click the pet); ordinary contents drop on removal and death, exactly once.
+- **Remove a chest** with the button in the top right corner of the pet's chest screen (a small chest with a red cross), or with shears (right-click the pet). The chest and everything in it drop to the ground, exactly once; creative players only get the contents. Contents also drop when the pet dies.
 - **Ender chests:** access the opening player's actual vanilla Ender inventory (27 slots). Public access still shows each viewer their own inventory. Ender contents never belong to the pet and do not drop when it dies or loses its chest. The pet displays a compact Ender saddlebag texture.
+- **Model packs.** The saddlebags are anchored to the torso that is actually drawn, so packs that rebuild the cat with Entity Model Features (Fresh Animations, Better Cats...) keep them on its back, standing, sitting and as a kitten. Checked with Fresh Animations 1.11.2 on EMF 3.3.12 and ETF 7.2.6, alone and together with Sodium, Iris, Entity Culling and ImmediatelyFast.
 - Preserve all eleven original **More Chest Variants** textures and add pale oak support through the installed mod's texture.
 - Optional Cloth Config screens and Fabric Mod Menu integration; optional chest icons and hiding chest models.
 - Preserve original entity save keys and datapack/resource namespaces. Import a legacy `chestedcompanions.json` without modifying it.
@@ -50,13 +51,13 @@ JARs are written to `versions/1.21.11-<loader>/build/libs/`. Files ending in `-s
 
 The smoke-test mod lives in a separate `smoke` source set and is excluded from release JARs. Its GLFW window is hidden before creation. Linux CI runs it under Xvfb. `runSmokeServer` starts a real dedicated server on a throw-away flat world and plays whole scenarios on it: a copper golem emptying a cat's copper chest into a placed chest, copper chest oxidation and waxing, and chest removal and death drops, failing on the first duplicated or lost item.
 
-`runSmokeScreens` does the same on a real client: it saves screenshots of every chest type on a cat and on a wolf (both flanks, lid shut and open), of sitting and baby pets, and of a copper golem emptying a pet's chest, into `run/smoke-screens/screenshots`. It needs Fabric API on the runtime classpath:
+`runSmokeScreens` does the same on a real client: it saves screenshots of every chest type on a cat and on a wolf (both flanks, lid shut and open), of sitting and baby pets, of a copper golem emptying a pet's chest, and of the pet's chest screen, where it hovers and really clicks the remove-chest button and checks that the chest and its contents land on the ground, into `run/smoke-screens/screenshots`. It needs Fabric API on the runtime classpath:
 
 ```powershell
 .\build.ps1 :1.21.11-fabric:runSmokeScreens -PwithGameTest
 ```
 
-To look at a third-party combination, put the mods in `run/<name>/mods`, the resource packs in `run/<name>/resourcepacks`, enable the packs in `run/<name>/options.txt`, and add `-PscreensDir=<name>`. `-PscreensOnly=cats,wolves,sitting,baby,mcv,golem` limits the scene to some of its parts.
+To look at a third-party combination, put the mods in `run/<name>/mods`, the resource packs in `run/<name>/resourcepacks`, enable the packs in `run/<name>/options.txt`, and add `-PscreensDir=<name>`. `-PscreensOnly=cats,wolves,sitting,baby,mcv,golem,gui` limits the scene to some of its parts.
 
 ## Stonecutter
 

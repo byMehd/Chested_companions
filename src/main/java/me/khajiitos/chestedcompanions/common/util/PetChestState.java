@@ -100,6 +100,15 @@ public final class PetChestState {
         return level.getGameTime() < this.frozenUntil;
     }
 
+    /**
+     * Whether the pet stays where it is, sitting or standing: somebody has its chest open, or a copper golem is about
+     * to work on it. A pet that is hurt, burning or swimming is never held.
+     */
+    public boolean keepsStill(LivingEntity pet) {
+        return (this.isOpen() || this.isFrozen(pet.level()))
+                && pet.hurtTime == 0 && !pet.isOnFire() && !pet.isInWater() && !pet.isInLava();
+    }
+
     public void setLidOpen(boolean open) {
         this.lid.shouldBeOpen(open);
     }

@@ -38,7 +38,7 @@ public final class ServerSmokeScenario {
     private static final int GOLEM_TIMEOUT_TICKS = 3000;
     private static final int AGING_TIMEOUT_TICKS = 4000;
 
-    private enum Stage { WAITING, GOLEM, AGING, DROPS, DONE }
+    private enum Stage { WAITING, GOLEM, HOLD, AGING, DROPS, DONE }
 
     private final MinecraftServer server;
     private ServerLevel level;
@@ -56,7 +56,13 @@ public final class ServerSmokeScenario {
     private boolean sawClosedAfterOpen;
     private boolean sawGetItemState;
     private double maxDriftWhileOpen;
+    private double openDistance;
     private int openTicks;
+
+    // hold-still scenario
+    private final List<TamableAnimal> holdPets = new ArrayList<>();
+    private final List<Vec3> holdStarts = new ArrayList<>();
+    private final List<CopperGolem> holdViewers = new ArrayList<>();
 
     // aging scenario
     private Cat agingPet;
@@ -88,6 +94,7 @@ public final class ServerSmokeScenario {
             case GOLEM -> {
                 this.tickGolemScenario();
             }
+            case HOLD -> this.tickHoldScenario();
             case AGING -> this.tickAgingScenario();
             case DROPS -> {
                 this.runDropScenarios();
@@ -167,7 +174,13 @@ public final class ServerSmokeScenario {
 
     private void tickGolemScenario() {
         var state = ((IChestEntity) this.petWithCopper).chestedCompanions$getState();
+        if (this.stageTick > 20) {
+            check(this.petWithCopper.isInSittingPose(), "the sitting pet stood up while the golem worked on it");
+        }
         if (state.isOpen()) {
+            if (!this.sawOpen) {
+                this.openDistance = this.golem.distanceTo(this.petWithCopper);
+            }
             this.sawOpen = true;
             this.openTicks++;
             this.maxDriftWhileOpen = Math.max(this.maxDriftWhileOpen, this.petWithCopper.position().distanceTo(this.petStart));
@@ -182,17 +195,62 @@ public final class ServerSmokeScenario {
             check(this.sawGetItemState, "the golem never played its item pickup animation");
             check(this.maxDriftWhileOpen < 1.5, "the pet moved " + this.maxDriftWhileOpen + " blocks while the golem worked");
             check(this.openTicks >= 55, "the golem did not keep the chest open for its whole interaction: " + this.openTicks);
+            check(this.openDistance < 1.75, "the golem opened the chest from " + this.openDistance + " blocks away, further than vanilla reaches a chest");
             check(countDiamonds(inventory(this.petWithCopper)) == 0 && this.golem.getMainHandItem().isEmpty(), "leftovers after delivery");
             System.out.println("REVIVED_SERVER_SMOKE: golem scenario passed after " + this.stageTick + " ticks (chest open for "
-                    + this.openTicks + " ticks, pet moved " + String.format("%.2f", this.maxDriftWhileOpen) + " blocks)");
+                    + this.openTicks + " ticks from " + String.format("%.2f", this.openDistance) + " blocks away, pet moved "
+                    + String.format("%.2f", this.maxDriftWhileOpen) + " blocks and stayed seated)");
             this.petWithCopper.discard();
             this.golem.discard();
-            this.startAgingScenario();
-            this.next(Stage.AGING);
+            this.startHoldScenario();
+            this.next(Stage.HOLD);
             return;
         }
         check(this.stageTick < GOLEM_TIMEOUT_TICKS, "timeout in the golem scenario: pet inventory " + inventory(this.petWithCopper)
                 + ", golem holds " + this.golem.getMainHandItem() + ", state " + this.golem.getState() + ", opened=" + this.sawOpen);
+    }
+
+    // ---------------------------------------------------------------- hold still
+
+    private static final int HOLD_TICKS = 60;
+
+    /** A cat and a wolf with somewhere to go stay put for as long as somebody has their chest open. */
+    private void startHoldScenario() {
+        for (EntityType<? extends TamableAnimal> type : List.<EntityType<? extends TamableAnimal>>of(EntityType.CAT, EntityType.WOLF)) {
+            BlockPos at = this.base.offset(0, 0, this.holdPets.size() * 4 - 10);
+            TamableAnimal pet = type.spawn(this.level, at, EntitySpawnReason.COMMAND);
+            check(pet != null, "could not spawn " + type);
+            pet.setTame(true, false);
+            IChestEntity chested = (IChestEntity) pet;
+            chested.chestedCompanions$setChestItemStack(new ItemStack(Items.CHEST));
+            chested.chestedCompanions$createInventory();
+            CopperGolem viewer = EntityType.COPPER_GOLEM.spawn(this.level, at.offset(2, 0, 0), EntitySpawnReason.COMMAND);
+            check(viewer != null, "could not spawn a copper golem");
+            viewer.setNoAi(true);
+            chested.chestedCompanions$getInventory().startOpen(viewer);
+            pet.getNavigation().moveTo(at.getX() + 12.5, at.getY(), at.getZ() + 0.5, 1.0);
+            this.holdPets.add(pet);
+            this.holdStarts.add(pet.position());
+            this.holdViewers.add(viewer);
+        }
+    }
+
+    private void tickHoldScenario() {
+        for (int i = 0; i < this.holdPets.size(); i++) {
+            TamableAnimal pet = this.holdPets.get(i);
+            double moved = pet.position().distanceTo(this.holdStarts.get(i));
+            check(moved < 0.3, "a " + pet.getType() + " walked " + moved + " blocks while its chest was open");
+            check(((IChestEntity) pet).chestedCompanions$getState().isOpen(), "the chest of a " + pet.getType() + " closed by itself");
+        }
+        if (this.stageTick >= HOLD_TICKS) {
+            System.out.println("REVIVED_SERVER_SMOKE: hold still scenario passed (cat and wolf stayed put for " + HOLD_TICKS + " ticks)");
+            for (int i = 0; i < this.holdPets.size(); i++) {
+                this.holdPets.get(i).discard();
+                this.holdViewers.get(i).discard();
+            }
+            this.startAgingScenario();
+            this.next(Stage.AGING);
+        }
     }
 
     // ---------------------------------------------------------------- aging

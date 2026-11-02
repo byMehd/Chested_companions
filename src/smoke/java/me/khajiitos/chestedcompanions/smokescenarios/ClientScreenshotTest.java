@@ -5,17 +5,23 @@ import me.khajiitos.chestedcompanions.common.util.PetChestState;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.client.gui.components.ImageButton;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.Heightmap;
+
+import org.lwjgl.glfw.GLFW;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -42,7 +48,7 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
 
     private static final String PREFIX = System.getProperty("revived.screens.prefix", "");
 
-    /** {@code -Drevived.screens.only=cats,wolves,sitting,baby,mcv,golem} runs just those parts of the scenario. */
+    /** {@code -Drevived.screens.only=cats,wolves,sitting,baby,mcv,golem,gui} runs just those parts of the scenario. */
     private static boolean wanted(String part) {
         String only = System.getProperty("revived.screens.only", "");
         return only.isEmpty() || Arrays.asList(only.split(",")).contains(part);
@@ -82,6 +88,7 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             if (wanted("baby")) babyPets(context, world, groundY);
             if (wanted("mcv")) modChests(context, world, groundY);
             if (wanted("golem")) golemVisit(context, world, groundY);
+            if (wanted("gui")) petScreen(context, world, groundY);
         }
     }
 
@@ -170,6 +177,65 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
                 context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_mcv_" + id + "_a_open");
                 discard(world, uuid);
             }
+        }
+    }
+
+    /**
+     * The pet's chest screen: the remove-chest button is there, shows its tooltip when hovered, and a real click on it
+     * closes the screen and leaves the chest and everything that was in it on the ground. Survival mode, so it runs last.
+     */
+    private static void petScreen(ClientGameTestContext context, TestSingleplayerContext world, int groundY) {
+        UUID uuid = spawnPet(world, groundY, false, Items.CHEST);
+        world.getServer().runCommand("gamemode survival @p");
+        world.getServer().runCommand("tp @p 3.1 " + groundY + " 0.5 90 0");
+        context.waitTicks(10);
+        world.getServer().runOnServer(server -> {
+            ServerPlayer player = server.getPlayerList().getPlayers().get(0);
+            TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
+            pet.tame(player);
+            IChestEntity chested = (IChestEntity) pet;
+            chested.chestedCompanions$getInventory().setItem(0, new ItemStack(Items.DIAMOND, 5));
+            chested.chestedCompanions$getInventory().setItem(1, new ItemStack(Items.EMERALD, 3));
+            chested.openCustomInventoryScreen(player);
+        });
+        context.waitForScreen(ContainerScreen.class);
+        context.waitTicks(5);
+        context.takeScreenshot(PREFIX + "gui_pet_chest");
+
+        double[] button = context.computeOnClient(client -> {
+            for (var child : client.screen.children()) {
+                if (child instanceof ImageButton image) {
+                    double scale = client.getWindow().getGuiScale();
+                    return new double[]{(image.getX() + image.getWidth() / 2.0) * scale, (image.getY() + image.getHeight() / 2.0) * scale};
+                }
+            }
+            return null;
+        });
+        if (button == null) {
+            throw new AssertionError("REVIVED_CLIENT_SCREENSHOTS_FAILED: the pet's chest screen has no remove-chest button");
+        }
+        context.getInput().setCursorPos(button[0], button[1]);
+        context.waitTicks(25);
+        context.takeScreenshot(PREFIX + "gui_pet_chest_hover");
+        context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        context.waitTicks(15);
+
+        boolean closed = context.computeOnClient(client -> client.screen == null);
+        int[] result = world.getServer().computeOnServer(server -> {
+            TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
+            int chests = 0, diamonds = 0, emeralds = 0;
+            for (ItemEntity item : server.overworld().getEntitiesOfClass(ItemEntity.class, pet.getBoundingBox().inflate(6.0))) {
+                ItemStack stack = item.getItem();
+                chests += stack.is(Items.CHEST) ? stack.getCount() : 0;
+                diamonds += stack.is(Items.DIAMOND) ? stack.getCount() : 0;
+                emeralds += stack.is(Items.EMERALD) ? stack.getCount() : 0;
+            }
+            return new int[]{((IChestEntity) pet).chestedCompanions$hasChest() ? 1 : 0, chests, diamonds, emeralds};
+        });
+        context.takeScreenshot(PREFIX + "gui_pet_chest_removed");
+        if (!closed || result[0] != 0 || result[1] != 1 || result[2] != 5 || result[3] != 3) {
+            throw new AssertionError("REVIVED_CLIENT_SCREENSHOTS_FAILED: the remove-chest button left screenClosed=" + closed + ", petHasChest=" + result[0]
+                    + ", chestsOnGround=" + result[1] + ", diamondsOnGround=" + result[2] + ", emeraldsOnGround=" + result[3]);
         }
     }
 

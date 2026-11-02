@@ -170,6 +170,44 @@ class PetChestStateTest {
         assertFalse(fixture.state.isFrozen(fixture.level));
     }
 
+    @Test void aPetKeepsStillWhileItsChestIsOpenOrAGolemIsAboutToWorkOnIt() {
+        PetFixture fixture = new PetFixture(new ItemStack(Items.CHEST), 9);
+        when(fixture.level.getGameTime()).thenReturn(100L);
+        assertFalse(fixture.state.keepsStill(fixture.pet));
+
+        Player viewer = fixture.ownerNearby();
+        fixture.inventory.get().startOpen(viewer);
+        assertTrue(fixture.state.keepsStill(fixture.pet));
+        fixture.inventory.get().stopOpen(viewer);
+        assertFalse(fixture.state.keepsStill(fixture.pet));
+
+        fixture.state.freeze(fixture.level, 10);
+        assertTrue(fixture.state.keepsStill(fixture.pet));
+        when(fixture.level.getGameTime()).thenReturn(110L);
+        assertFalse(fixture.state.keepsStill(fixture.pet));
+    }
+
+    @Test void aPetInDangerIsNeverHeld() {
+        PetFixture fixture = new PetFixture(new ItemStack(Items.CHEST), 9);
+        fixture.inventory.get().startOpen(fixture.ownerNearby());
+        assertTrue(fixture.state.keepsStill(fixture.pet));
+
+        fixture.pet.hurtTime = 5;
+        assertFalse(fixture.state.keepsStill(fixture.pet));
+        fixture.pet.hurtTime = 0;
+
+        when(fixture.pet.isOnFire()).thenReturn(true);
+        assertFalse(fixture.state.keepsStill(fixture.pet));
+        when(fixture.pet.isOnFire()).thenReturn(false);
+
+        when(fixture.pet.isInWater()).thenReturn(true);
+        assertFalse(fixture.state.keepsStill(fixture.pet));
+        when(fixture.pet.isInWater()).thenReturn(false);
+
+        when(fixture.pet.isInLava()).thenReturn(true);
+        assertFalse(fixture.state.keepsStill(fixture.pet));
+    }
+
     @Test void lidFollowsTheServerAtTheVanillaPace() {
         PetChestState state = new PetChestState();
         assertEquals(0.0F, state.lidOpenness(1.0F));
