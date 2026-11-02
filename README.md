@@ -50,6 +50,14 @@ JARs are written to `versions/1.21.11-<loader>/build/libs/`. Files ending in `-s
 
 The smoke-test mod lives in a separate `smoke` source set and is excluded from release JARs. Its GLFW window is hidden before creation. Linux CI runs it under Xvfb. `runSmokeServer` starts a real dedicated server on a throw-away flat world and plays whole scenarios on it: a copper golem emptying a cat's copper chest into a placed chest, copper chest oxidation and waxing, and chest removal and death drops, failing on the first duplicated or lost item.
 
+`runSmokeScreens` does the same on a real client: it saves screenshots of every chest type on a cat and on a wolf (both flanks, lid shut and open), of sitting and baby pets, and of a copper golem emptying a pet's chest, into `run/smoke-screens/screenshots`. It needs Fabric API on the runtime classpath:
+
+```powershell
+.\build.ps1 :1.21.11-fabric:runSmokeScreens -PwithGameTest
+```
+
+To look at a third-party combination, put the mods in `run/<name>/mods`, the resource packs in `run/<name>/resourcepacks`, enable the packs in `run/<name>/options.txt`, and add `-PscreensDir=<name>`. `-PscreensOnly=cats,wolves,sitting,baby,mcv,golem` limits the scene to some of its parts.
+
 ## Stonecutter
 
 `settings.gradle.kts` declares the Minecraft/loader variants. `stonecutter.gradle.kts` selects the active project and supplies loader constants. Shared logic and assets are in `src/main`; entrypoints and metadata are in `loaders/<loader>`. Each loader has its own build script.

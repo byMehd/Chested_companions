@@ -6,6 +6,8 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -15,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.Heightmap;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -39,6 +42,12 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
 
     private static final String PREFIX = System.getProperty("revived.screens.prefix", "");
 
+    /** {@code -Drevived.screens.only=cats,wolves,sitting,baby,mcv,golem} runs just those parts of the scenario. */
+    private static boolean wanted(String part) {
+        String only = System.getProperty("revived.screens.only", "");
+        return only.isEmpty() || Arrays.asList(only.split(",")).contains(part);
+    }
+
     @Override
     public void runTest(ClientGameTestContext context) {
         context.runOnClient(client -> {
@@ -50,6 +59,7 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             world.getServer().runCommand("gamemode spectator @p");
             int groundY = world.getServer().computeOnServer(server -> server.overworld().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 0, 0));
             for (boolean wolf : new boolean[]{false, true}) {
+                if (!wanted(wolf ? "wolves" : "cats")) continue;
                 for (Map.Entry<String, Item> chest : CHESTS.entrySet()) {
                     String pet = (wolf ? "wolf_" : "cat_") + chest.getKey();
                     UUID uuid = spawnPet(world, groundY, wolf, chest.getValue());
@@ -68,8 +78,10 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
                     discard(world, uuid);
                 }
             }
-            sittingPets(context, world, groundY);
-            golemVisit(context, world, groundY);
+            if (wanted("sitting")) sittingPets(context, world, groundY);
+            if (wanted("baby")) babyPets(context, world, groundY);
+            if (wanted("mcv")) modChests(context, world, groundY);
+            if (wanted("golem")) golemVisit(context, world, groundY);
         }
     }
 
@@ -120,6 +132,44 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             context.waitTicks(14);
             context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_copper_sitting_a_open");
             discard(world, uuid);
+        }
+    }
+
+    /** Kittens and pups wear the bags at half size, standing and sitting. */
+    private static void babyPets(ClientGameTestContext context, TestSingleplayerContext world, int groundY) {
+        for (boolean wolf : new boolean[]{false, true}) {
+            for (boolean sitting : new boolean[]{false, true}) {
+                String name = (wolf ? "wolf" : "cat") + "_copper_baby" + (sitting ? "_sitting" : "") + "_a_open";
+                UUID uuid = spawnPet(world, groundY, wolf, Items.COPPER_CHEST);
+                world.getServer().runOnServer(server -> {
+                    TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
+                    pet.setBaby(true);
+                    pet.setInSittingPose(sitting);
+                });
+                context.waitTicks(15);
+                look(world, groundY, 1);
+                setLid(world, uuid, true);
+                context.waitTicks(22);
+                context.takeScreenshot(PREFIX + name);
+                discard(world, uuid);
+            }
+        }
+    }
+
+    /** Chests of More Chest Variants when it is installed: one with its own bag texture, and pale oak's shared atlas. */
+    private static void modChests(ClientGameTestContext context, TestSingleplayerContext world, int groundY) {
+        for (boolean wolf : new boolean[]{false, true}) {
+            for (String id : new String[]{"cherry_chest", "pale_oak_chest"}) {
+                Item chest = BuiltInRegistries.ITEM.getOptional(Identifier.fromNamespaceAndPath("lolmcv", id)).orElse(null);
+                if (chest == null) return;
+                UUID uuid = spawnPet(world, groundY, wolf, chest);
+                context.waitTicks(15);
+                look(world, groundY, 1);
+                setLid(world, uuid, true);
+                context.waitTicks(22);
+                context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_mcv_" + id + "_a_open");
+                discard(world, uuid);
+            }
         }
     }
 

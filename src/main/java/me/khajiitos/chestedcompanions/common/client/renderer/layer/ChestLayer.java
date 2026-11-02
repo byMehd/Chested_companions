@@ -88,6 +88,19 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
     protected abstract Vec3i positionLeftChestCube();
     protected abstract Vec3i positionRightChestCube();
 
+    /** Poses the parent model for this pet, the way the main model is posed. */
+    protected void poseModel(T renderState) {
+        this.getParentModel().setupAnim(renderState);
+    }
+
+    /** Moves the two bags of a chest part apart across the pet by {@code amount} (closer when negative). */
+    protected static void spread(ModelPart chestModelPart, float amount) {
+        chestModelPart.getChild("left_body").z += amount;
+        chestModelPart.getChild("left_lid").z += amount;
+        chestModelPart.getChild("right_body").z -= amount;
+        chestModelPart.getChild("right_lid").z -= amount;
+    }
+
     @Override
     public void submit(@NotNull PoseStack poseStack, @NotNull SubmitNodeCollector collector, int pPackedLight, @NotNull T renderState, float v, float v1) {
         if (!(renderState instanceof IChestEntityRenderState chestEntityRenderState) || !chestEntityRenderState.chestedCompanions$hasChest()) {
@@ -96,7 +109,7 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
 
         if (renderState.isInvisible) return;
         // Rendering is deferred in 1.21.11. Snapshot this pet's transform in its own part.
-        this.getParentModel().setupAnim(renderState);
+        this.poseModel(renderState);
         ItemStack chest = chestEntityRenderState.chestedCompanions$getChestItemStack();
         Identifier item = BuiltInRegistries.ITEM.getKey(chest.getItem());
         boolean atlas = item.getNamespace().equals("lolmcv") && item.getPath().equals("pale_oak_chest");

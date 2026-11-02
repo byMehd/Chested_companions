@@ -13,6 +13,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.ChestLidController;
+import net.minecraft.world.level.gameevent.GameEvent;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,13 +59,14 @@ public final class PetChestState {
         if (wasClosed) {
             this.closeSound = PetChestSounds.close(pet.chestedCompanions$getChestItemStack());
             playSound(level, pet, PetChestSounds.open(pet.chestedCompanions$getChestItemStack()));
+            level.gameEvent(opener, GameEvent.CONTAINER_OPEN, pet.position());
             level.broadcastEntityEvent(pet, EVENT_OPEN);
         }
     }
 
     public <T extends TamableAnimal & IChestEntity> void close(T pet, ContainerUser user) {
         if (this.openers.remove(user) && this.openers.isEmpty() && pet.level() instanceof ServerLevel level) {
-            this.announceClosed(level, pet);
+            this.announceClosed(level, pet, user.getLivingEntity());
         }
     }
 
@@ -74,7 +77,7 @@ public final class PetChestState {
         }
         if (this.openers.removeIf(user -> !stillOpen(pet, user)) && this.openers.isEmpty()
                 && pet.level() instanceof ServerLevel level) {
-            this.announceClosed(level, pet);
+            this.announceClosed(level, pet, null);
         }
     }
 
@@ -109,8 +112,9 @@ public final class PetChestState {
         return this.lid.getOpenness(partialTick);
     }
 
-    private <T extends TamableAnimal & IChestEntity> void announceClosed(ServerLevel level, T pet) {
+    private <T extends TamableAnimal & IChestEntity> void announceClosed(ServerLevel level, T pet, @Nullable LivingEntity closer) {
         playSound(level, pet, this.closeSound);
+        level.gameEvent(closer, GameEvent.CONTAINER_CLOSE, pet.position());
         level.broadcastEntityEvent(pet, EVENT_CLOSE);
     }
 

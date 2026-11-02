@@ -40,6 +40,7 @@ final class PetFixture {
         when(pet.isAlive()).thenReturn(true);
         when(pet.isTame()).thenReturn(true);
         setBox(pet, new AABB(0, 0, 0, 0.6, 0.7, 0.6));
+        when(pet.position()).thenReturn(new Vec3(0, 0, 0));
         when(pet.chestedCompanions$getState()).thenReturn(state);
         when(pet.chestedCompanions$getInventory()).thenAnswer(i -> inventory.get());
         when(pet.chestedCompanions$getChestItemStack()).thenAnswer(i -> chest.get());

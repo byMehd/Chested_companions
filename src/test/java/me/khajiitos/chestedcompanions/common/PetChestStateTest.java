@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -60,6 +61,8 @@ class PetChestStateTest {
         assertFalse(fixture.state.isOpen());
         verifySound(fixture, SoundEvents.CHEST_CLOSE, 1);
         verify(fixture.level).broadcastEntityEvent(fixture.pet, PetChestState.EVENT_CLOSE);
+        verify(fixture.level).gameEvent(eq(first), eq(net.minecraft.world.level.gameevent.GameEvent.CONTAINER_OPEN), any(net.minecraft.world.phys.Vec3.class));
+        verify(fixture.level).gameEvent(eq(second), eq(net.minecraft.world.level.gameevent.GameEvent.CONTAINER_CLOSE), any(net.minecraft.world.phys.Vec3.class));
         inventory.stopOpen(second);
         verify(fixture.level, times(1)).broadcastEntityEvent(fixture.pet, PetChestState.EVENT_CLOSE);
     }

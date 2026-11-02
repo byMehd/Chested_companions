@@ -40,7 +40,8 @@ public final class PetChestPickupBehavior extends Behavior<CopperGolem> {
     private static final long VISITED_MEMORY_TICKS = 6000L;
     private static final double START_RANGE = 1.0;
     private static final double CONTINUE_RANGE = 2.0;
-    private static final double FREEZE_DISTANCE_SQR = 16.0;
+    /** The pet is held still only once the golem is about to reach it, so a golem stuck behind a wall never pins a pet down. */
+    private static final double FREEZE_DISTANCE_SQR = 2.5 * 2.5;
     private static final int FREEZE_TICKS = 10;
     private static final int INTERACTION_TICKS = TransportItemsBetweenContainers.TARGET_INTERACTION_TIME;
     private static final int TICK_TO_OPEN = 1;
