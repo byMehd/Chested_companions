@@ -155,7 +155,12 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          xvfb-run -a ./gradlew :1.21.11-fabric:runSmokeScreens -PwithGameTest --console=plain | tee screenshots.log
+          # A shared runner is sometimes too slow for the software-rendered client to load its world in time.
+          for attempt in 1 2 3; do
+            rm -rf run/smoke-screens/screenshots
+            if xvfb-run -a ./gradlew :1.21.11-fabric:runSmokeScreens -PwithGameTest --console=plain | tee -a screenshots.log; then break; fi
+            echo "Attempt $attempt failed"
+          done
           test "$(ls run/smoke-screens/screenshots/*.png | wc -l)" -eq 61
       - name: Upload screenshots
         if: always()

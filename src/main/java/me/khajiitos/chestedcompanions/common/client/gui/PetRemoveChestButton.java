@@ -17,16 +17,21 @@ import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The button, beside a pet's chest screen, that takes the chest off the pet: an ordinary vanilla button showing the
- * shears, which are the other way to do it. Everything it draws is vanilla, so resource packs restyle it too.
+ * The button, beside a pet's chest screen, that takes the chest off the pet: an ordinary vanilla button showing a
+ * crossed-out chest: the vanilla chest item under a thin red cross in the colours of the anvil's. Everything else is
+ * vanilla too (the button sprites and highlight), so resource packs restyle the button and the chest.
  */
 public final class PetRemoveChestButton extends AbstractButton {
+    /** The two reds of the cross the anvil draws over a recipe it cannot make. */
+    private static final int CROSS_LIGHT = 0xFFBA370F;
+    private static final int CROSS_DARK = 0xFF962300;
     private static final Component LABEL = Component.translatable("gui.chestedcompanions.remove_chest");
     private static final int SIZE = 20;
     private static final int GAP = 4;
+    private static final int CROSS_SIZE = 12;
 
     private final Runnable action;
-    private final ItemStack icon = new ItemStack(Items.SHEARS);
+    private final ItemStack icon = new ItemStack(Items.CHEST);
 
     private PetRemoveChestButton(int x, int y, Runnable action) {
         super(x, y, SIZE, SIZE, LABEL);
@@ -47,7 +52,23 @@ public final class PetRemoveChestButton extends AbstractButton {
     @Override
     protected void renderContents(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderDefaultSprite(graphics);
-        graphics.renderItem(this.icon, this.getX() + (this.getWidth() - 16) / 2, this.getY() + (this.getHeight() - 16) / 2);
+        this.renderIcon(graphics, this.getX(), this.getY());
+    }
+
+    /** The chest with a thin red cross over it, both inside the 16x16 an item takes. */
+    private void renderIcon(GuiGraphics graphics, int left, int top) {
+        int x = left + (SIZE - 16) / 2;
+        int y = top + (SIZE - 16) / 2;
+        graphics.renderItem(this.icon, x, y);
+        for (int i = 0; i < CROSS_SIZE; i++) {
+            int row = y + 2 + i;
+            int down = x + 2 + i;
+            int up = x + 2 + CROSS_SIZE - 1 - i;
+            graphics.fill(down, row, down + 1, row + 1, CROSS_LIGHT);
+            graphics.fill(down + 1, row, down + 2, row + 1, CROSS_DARK);
+            graphics.fill(up, row, up + 1, row + 1, CROSS_LIGHT);
+            graphics.fill(up + 1, row, up + 2, row + 1, CROSS_DARK);
+        }
     }
 
     /** @return the button for this screen, or null when it is not the chest screen of a pet */

@@ -29,9 +29,12 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Real-client check of the rendering: every chest type on a cat and on a wolf, seen from both flanks, with the lid
- * shut and open, plus a copper golem caught in the middle of emptying a pet's chest. Screenshots land in the run
- * folder's {@code screenshots} directory; the scenario fails if a pet never appears or the golem never opens the chest.
+ * Real-client check of the rendering and of the pet's chest screen: every chest type on a cat and on a wolf, seen from
+ * both flanks, with the lid shut and open; sitting and baby pets; the chests of More Chest Variants when it is
+ * installed; a copper golem caught in the middle of emptying a pet's chest; and the pet's screen, where the
+ * remove-chest button is hovered and really clicked. Screenshots land in the run folder's {@code screenshots}
+ * directory; the scenario fails if a pet never appears, the golem never opens the chest or the button does not
+ * leave the chest and its contents on the ground.
  * Run with {@code -Dfabric.client.gametest} and Fabric API present; any resource packs or mods installed in the run
  * folder are rendered too, which is how third-party combinations are inspected.
  */
@@ -59,6 +62,10 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
         context.runOnClient(client -> {
             client.options.hideGui = true;
             client.options.fov().set(40);
+            // A short render distance: on a small CI runner the client's chunk meshing starves the world loading, which
+            // waits for the client to acknowledge its chunks, until the gametest gives up. The scenes are all close up.
+            client.options.renderDistance().set(3);
+            client.options.simulationDistance().set(5);
         });
         try (TestSingleplayerContext world = context.worldBuilder().create()) {
             world.getClientWorld().waitForChunksRender();
