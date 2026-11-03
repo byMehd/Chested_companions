@@ -9,6 +9,10 @@ import net.minecraft.client.model.geom.LayerDefinitions;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.entity.state.CatRenderState;
+import net.minecraft.client.renderer.entity.state.WolfRenderState;
+import me.khajiitos.chestedcompanions.common.client.renderer.layer.CatChestLayer;
+import me.khajiitos.chestedcompanions.common.client.renderer.layer.WolfChestLayer;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.core.Vec3i;
 import net.minecraft.server.Bootstrap;
@@ -236,30 +240,59 @@ class ChestBagTest {
         return closest;
     }
 
-    /** Where the layers put the chest part: relative to the body part, at this scale (see WolfChestLayer and CatChestLayer). */
-    private record Pet(String name, ModelLayerLocation layer, Vec3i left, Vec3i right, float dy, float dz, float scale, boolean flushWithTorso) {}
+    private record Pet(String name, ModelLayerLocation layer, boolean wolf, boolean baby, boolean sitting,
+                       boolean flushWithTorso) {}
+
+    // Exercise the actual layer placement against baked vanilla models, without requiring accessor mixins in unit tests.
+    private static final class CatLayer extends CatChestLayer {
+        private final ModelPart body;
+        CatLayer(ModelPart body) { super(null); this.body = body; }
+        @Override protected ModelPart getParentModelBody() { return body; }
+        void place(CatRenderState state, ModelPart chest) { setupPosition(state, chest); }
+    }
+
+    private static final class WolfLayer extends WolfChestLayer {
+        private final ModelPart body;
+        WolfLayer(ModelPart body) { super(null); this.body = body; }
+        @Override protected ModelPart getParentModelBody() { return body; }
+        void place(WolfRenderState state, ModelPart chest) { setupPosition(state, chest); }
+    }
 
     @Test void anOpenLidNeverLiesInTheSidePlaneOfAnyPartOfTheVanillaPets() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
         Map<ModelLayerLocation, LayerDefinition> layers = LayerDefinitions.createRoots();
+        //? if >=26.1 {
+        /*boolean babyWolfFlush = false; // Its own wider baby model already has clearance in WolfChestLayer.
+        *///?} else {
+        boolean babyWolfFlush = true;
+        //?}
         List<Pet> pets = List.of(
-                new Pet("wolf", ModelLayers.WOLF, ORIGINS[0], ORIGINS[1], 0.0F, 0.0F, 0.6F, true),
-                new Pet("pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 0.0F, -1.0F, 0.3F, true),
-                new Pet("sitting pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 1.0F, -1.0F, 0.3F, true),
-                new Pet("cat", ModelLayers.CAT, ORIGINS[2], ORIGINS[3], 2.0F, 0.0F, 0.6F, false),
-                new Pet("kitten", ModelLayers.CAT_BABY, ORIGINS[2], ORIGINS[3], 0.0F, 0.0F, 0.3F, false));
+                new Pet("wolf", ModelLayers.WOLF, true, false, false, true),
+                new Pet("pup", ModelLayers.WOLF_BABY, true, true, false, babyWolfFlush),
+                new Pet("sitting pup", ModelLayers.WOLF_BABY, true, true, true, babyWolfFlush),
+                new Pet("cat", ModelLayers.CAT, false, false, false, false),
+                new Pet("kitten", ModelLayers.CAT_BABY, false, true, false, false));
         for (Pet pet : pets) {
             ModelPart root = layers.get(pet.layer()).bakeRoot();
             ModelPart body = root.getChild("body");
-            ChestBag left = new ChestBag(pet.left(), false, 0, 0, 22, 11);
-            ChestBag right = new ChestBag(pet.right(), true, 0, 0, 22, 11);
+            int origin = pet.wolf() ? 0 : 2;
+            ChestBag left = new ChestBag(ORIGINS[origin], false, 0, 0, 22, 11);
+            ChestBag right = new ChestBag(ORIGINS[origin + 1], true, 0, 0, 22, 11);
             ModelPart chest = new ModelPart(List.of(), Map.of(
                     "left_body", left.createBody(), "left_lid", left.createLid(OPEN),
                     "right_body", right.createBody(), "right_lid", right.createLid(OPEN)));
-            chest.setPos(body.x, body.y + pet.dy(), body.z + pet.dz());
-            chest.setRotation(OPEN, OPEN, OPEN);
-            chest.xScale = chest.yScale = chest.zScale = pet.scale();
+            if (pet.wolf()) {
+                WolfRenderState state = new WolfRenderState();
+                state.isBaby = pet.baby();
+                state.isSitting = pet.sitting();
+                new WolfLayer(body).place(state, chest);
+            } else {
+                CatRenderState state = new CatRenderState();
+                state.isBaby = pet.baby();
+                new CatLayer(body).place(state, chest);
+            }
+            float placedZ = chest.getChild("left_body").z;
             List<float[]> model = posedBoxes(root, "");
 
             // The wolf's bags hang on the side of its torso, so without the clearance the lid is flush with it.
@@ -271,7 +304,7 @@ class ChestBagTest {
             ChestLayer.keepLidsOffTheTorso(left, chest, PetTorso.find(body));
             float after = closestSidePlane(posedBoxes(chest, "_lid"), model);
             assertTrue(after >= 0.05F, pet.name() + ": the open lid is " + after + " from a side plane of the model");
-            float moved = chest.getChild("left_body").z * pet.scale();
+            float moved = (chest.getChild("left_body").z - placedZ) * chest.zScale;
             assertTrue(moved <= 0.2F, pet.name() + ": the bags stay attached, they moved " + moved);
             if (!pet.flushWithTorso()) {
                 assertEquals(0.0F, moved, pet.name() + ": the cat layer's own placement is left as it is");

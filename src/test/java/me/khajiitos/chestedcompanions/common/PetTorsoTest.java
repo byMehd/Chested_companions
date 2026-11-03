@@ -120,6 +120,65 @@ class PetTorsoTest {
         assertNull(PetTorso.find(new ModelPart(List.of(), Map.of())));
     }
 
+    /**
+     * Fat Cat on a kitten, as Entity Model Features builds it: the vanilla body part is empty and the whole animal
+     * hangs below it, head included. A baby is half the size and the pack makes its head 1.5 times bigger on top, so the
+     * head ends up at 0.75 against the body's 0.5, and its 9x8x7 cube (volume 213) outweighs the 10x9x14 one of the
+     * body (158).
+     */
+    private static ModelPart fatCatKitten(String headName) {
+        ModelPart head = part(0.0F, -2.0F, -9.0F, 0.0F, List.of(cube(-4.5F, -4.0F, -4.0F, 9.0F, 8.0F, 7.0F)), Map.of());
+        head.xScale = head.yScale = head.zScale = 1.5F;
+        ModelPart torso = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(cube(-5.0F, -4.5F, -7.0F, 10.0F, 9.0F, 14.0F)), Map.of());
+        ModelPart leg = part(3.4F, 4.0F, -4.0F, 0.0F, List.of(cube(-1.5F, -1.5F, -1.5F, 3.0F, 6.0F, 3.0F)), Map.of());
+        ModelPart tail = part(0.0F, -1.0F, 9.0F, 0.0F, List.of(cube(-1.5F, -1.5F, -1.5F, 3.0F, 3.0F, 12.0F)), Map.of());
+        ModelPart rotation = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(), Map.of(
+                headName, head, "EMF_body_cat", torso, "EMF_front_right_leg_cat", leg, "EMF_tail_cat", tail));
+        ModelPart wrapper = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(), Map.of("EMF_body_rotation", rotation));
+        ModelPart body = part(0.0F, 20.0F, 0.0F, 0.0F, List.of(), Map.of("EMF_body", wrapper));
+        body.xScale = body.yScale = body.zScale = 0.5F;
+        return body;
+    }
+
+    @Test void aKittensHeadBiggerThanItsBodyIsNotTakenForItsTorso() {
+        PetTorso torso = PetTorso.find(fatCatKitten("EMF_head_cat"));
+        assertNotNull(torso);
+        assertEquals(0.0F, torso.x(), 1.0E-3F);
+        assertEquals(20.0F, torso.y(), 1.0E-3F);
+        assertEquals(0.0F, torso.z(), 1.0E-3F);
+        assertEquals(7.0F, torso.length(), 1.0E-3F);
+        assertEquals(2.5F, torso.halfWidth(), 1.0E-3F);
+    }
+
+    @Test void aHeadNoPartIsNamedAfterIsStillTheBiggestCube() {
+        // Nothing but its size tells this head from the torso, and it is the bigger: it also shows that the head is the
+        // bigger cube in the kitten above, so that the test of that one does not pass by itself.
+        PetTorso torso = PetTorso.find(fatCatKitten("EMF_skull"));
+        assertNotNull(torso);
+        assertEquals(6.75F, torso.length(), 1.0E-3F);
+    }
+
+    @Test void aModelWithNothingButHeadPartsStillHasATorso() {
+        ModelPart head = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(cube(-4.0F, -4.0F, -4.0F, 8.0F, 8.0F, 8.0F)), Map.of());
+        PetTorso torso = PetTorso.find(part(0.0F, 12.0F, 0.0F, 0.0F, List.of(), Map.of("EMF_Head2", head)));
+        assertNotNull(torso);
+        assertEquals(8.0F, torso.length(), 1.0E-3F);
+    }
+
+    @Test void anUnnamedCubeBelowANamedHeadIsStillExcluded() {
+        ModelPart headCube = part(0, 0, 0, 0, List.of(cube(-5, -5, -5, 10, 10, 10)), Map.of());
+        ModelPart head = part(0, 0, 0, 0, List.of(), Map.of("geometry", headCube));
+        ModelPart body = part(0, 0, 0, 0, List.of(cube(-2, -4, -3, 4, 8, 6)), Map.of("EMF_Head2", head));
+        assertEquals(8.0F, PetTorso.find(body).length(), 1.0E-4F);
+    }
+
+    @Test void headInsideAnUnrelatedPartNameDoesNotExcludeItsBody() {
+        ModelPart torso = part(0, 0, 0, 0, List.of(cube(-5, -4, -7, 10, 8, 14)), Map.of());
+        ModelPart leg = part(0, 0, 0, 0, List.of(cube(-1, -2, -1, 2, 4, 2)), Map.of());
+        ModelPart root = part(0, 0, 0, 0, List.of(), Map.of("overhead_body", torso, "leg", leg));
+        assertEquals(14.0F, PetTorso.find(root).length(), 1.0E-4F);
+    }
+
     @Test void theVanillaWolfTorsoIsItsBodyPartAndNotItsMane() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
@@ -135,8 +194,13 @@ class PetTorsoTest {
 
         PetTorso pup = PetTorso.find(layers.get(ModelLayers.WOLF_BABY).bakeRoot().getChild("body"));
         assertNotNull(pup);
+        //? if >=26.1 {
+        /*assertEquals(3.0F, pup.halfWidth(), 1.0E-4F);
+        assertEquals(8.0F, pup.length(), 1.0E-4F);
+        *///?} else {
         assertEquals(1.5F, pup.halfWidth(), 1.0E-4F);
         assertEquals(4.5F, pup.length(), 1.0E-4F);
+        //?}
     }
 
     /** The open lids of a wolf whose body part is empty, as Entity Model Features leaves it, with this torso below it. */

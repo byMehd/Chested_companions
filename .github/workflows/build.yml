@@ -14,7 +14,7 @@ on:
         description: Minecraft version to validate (all runs the complete matrix)
         type: choice
         default: all
-        options: [all, '26.2', '26.3']
+        options: [all, '1.21.9', '1.21.10', '1.21.11', '26.1.2', '26.2', '26.3']
       checks:
         description: Validation stage
         type: choice
@@ -79,7 +79,7 @@ jobs:
         if: matrix.profile == 'current'
         uses: actions/upload-artifact@v7
         with:
-          name: Chested-Companions-Revived-1.0.0-mc${{ matrix.mc }}-${{ matrix.loader }}
+          name: Chested-Companions-Revived-1.0.1-mc${{ matrix.mc }}-${{ matrix.loader }}
           path: versions/${{ matrix.mc }}-${{ matrix.loader }}/build/libs/*.jar
           if-no-files-found: error
       - name: Upload test reports
