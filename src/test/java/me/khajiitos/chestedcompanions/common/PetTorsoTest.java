@@ -135,8 +135,13 @@ class PetTorsoTest {
 
         PetTorso pup = PetTorso.find(layers.get(ModelLayers.WOLF_BABY).bakeRoot().getChild("body"));
         assertNotNull(pup);
+        //? if >=26.1 {
+        /*assertEquals(3.0F, pup.halfWidth(), 1.0E-4F);
+        assertEquals(8.0F, pup.length(), 1.0E-4F);
+        *///?} else {
         assertEquals(1.5F, pup.halfWidth(), 1.0E-4F);
         assertEquals(4.5F, pup.length(), 1.0E-4F);
+        //?}
     }
 
     /** The open lids of a wolf whose body part is empty, as Entity Model Features leaves it, with this torso below it. */

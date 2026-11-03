@@ -31,7 +31,7 @@ class ChestBagTest {
             new Vec3i(-8, -4, 6), new Vec3i(-8, -4, -9),     // wolf, left and right
             new Vec3i(-22, 4, 4), new Vec3i(-22, 4, -7),     // cat, left and right
     };
-    private static final float OPEN = (float) Math.PI / 2.0F;
+    static final float OPEN = (float) Math.PI / 2.0F;
 
     /** min x, y, z then max x, y, z of the vertices of a cube, once moved by the given part pivot. */
     private static float[] extents(ModelPart.Cube cube, float pivotX, float pivotY, float pivotZ) {
@@ -190,7 +190,7 @@ class ChestBagTest {
     }
 
     /** Every box of the cubes whose path holds {@code only}, as min x, y, z then max x, y, z in model units, once posed. */
-    private static List<float[]> posedBoxes(ModelPart root, String only) {
+    static List<float[]> posedBoxes(ModelPart root, String only) {
         List<float[]> boxes = new ArrayList<>();
         root.visit(new PoseStack(), (pose, path, index, cube) -> {
             if (!path.contains(only)) return;
@@ -219,7 +219,7 @@ class ChestBagTest {
     }
 
     /** Closest a face of the open lid, across the pet, comes to such a face of a box of the model that it overlaps. */
-    private static float closestSidePlane(List<float[]> lid, List<float[]> model) {
+    static float closestSidePlane(List<float[]> lid, List<float[]> model) {
         float closest = Float.MAX_VALUE;
         for (float[] a : lid) {
             for (float[] b : model) {
@@ -236,19 +236,32 @@ class ChestBagTest {
         return closest;
     }
 
-    /** Where the layers put the chest part: relative to the body part, at this scale (see WolfChestLayer and CatChestLayer). */
-    private record Pet(String name, ModelLayerLocation layer, Vec3i left, Vec3i right, float dy, float dz, float scale, boolean flushWithTorso) {}
+    /**
+     * Where the layers put the chest part: relative to the body part, at this scale, with the bags already moved this far
+     * apart (see WolfChestLayer and CatChestLayer).
+     */
+    private record Pet(String name, ModelLayerLocation layer, Vec3i left, Vec3i right, float dy, float dz, float scale, float spread, boolean flushWithTorso) {}
 
     @Test void anOpenLidNeverLiesInTheSidePlaneOfAnyPartOfTheVanillaPets() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
         Map<ModelLayerLocation, LayerDefinition> layers = LayerDefinitions.createRoots();
+        //? if >=26.1 {
+        /*// Since 26.1 a pup has a body of its own and its bags hang flush against its flanks, at 5 units apart; the kitten is
+        // placed from its measured torso, which BabyCatPlacementTest checks on the real layer.
         List<Pet> pets = List.of(
-                new Pet("wolf", ModelLayers.WOLF, ORIGINS[0], ORIGINS[1], 0.0F, 0.0F, 0.6F, true),
-                new Pet("pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 0.0F, -1.0F, 0.3F, true),
-                new Pet("sitting pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 1.0F, -1.0F, 0.3F, true),
-                new Pet("cat", ModelLayers.CAT, ORIGINS[2], ORIGINS[3], 2.0F, 0.0F, 0.6F, false),
-                new Pet("kitten", ModelLayers.CAT_BABY, ORIGINS[2], ORIGINS[3], 0.0F, 0.0F, 0.3F, false));
+                new Pet("wolf", ModelLayers.WOLF, ORIGINS[0], ORIGINS[1], 0.0F, 0.0F, 0.6F, 0.0F, true),
+                new Pet("pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 0.0F, 0.0F, 0.3F, 5.0F, true),
+                new Pet("sitting pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 1.0F, 0.0F, 0.3F, 5.0F, true),
+                new Pet("cat", ModelLayers.CAT, ORIGINS[2], ORIGINS[3], 2.0F, 0.0F, 0.6F, 0.0F, false));
+        *///?} else {
+        List<Pet> pets = List.of(
+                new Pet("wolf", ModelLayers.WOLF, ORIGINS[0], ORIGINS[1], 0.0F, 0.0F, 0.6F, 0.0F, true),
+                new Pet("pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 0.0F, -1.0F, 0.3F, 0.0F, true),
+                new Pet("sitting pup", ModelLayers.WOLF_BABY, ORIGINS[0], ORIGINS[1], 1.0F, -1.0F, 0.3F, 0.0F, true),
+                new Pet("cat", ModelLayers.CAT, ORIGINS[2], ORIGINS[3], 2.0F, 0.0F, 0.6F, 0.0F, false),
+                new Pet("kitten", ModelLayers.CAT_BABY, ORIGINS[2], ORIGINS[3], 0.0F, 0.0F, 0.3F, 0.0F, false));
+        //?}
         for (Pet pet : pets) {
             ModelPart root = layers.get(pet.layer()).bakeRoot();
             ModelPart body = root.getChild("body");
@@ -260,6 +273,11 @@ class ChestBagTest {
             chest.setPos(body.x, body.y + pet.dy(), body.z + pet.dz());
             chest.setRotation(OPEN, OPEN, OPEN);
             chest.xScale = chest.yScale = chest.zScale = pet.scale();
+            chest.getChild("left_body").z += pet.spread();
+            chest.getChild("left_lid").z += pet.spread();
+            chest.getChild("right_body").z -= pet.spread();
+            chest.getChild("right_lid").z -= pet.spread();
+            float placedZ = chest.getChild("left_body").z;
             List<float[]> model = posedBoxes(root, "");
 
             // The wolf's bags hang on the side of its torso, so without the clearance the lid is flush with it.
@@ -271,7 +289,7 @@ class ChestBagTest {
             ChestLayer.keepLidsOffTheTorso(left, chest, PetTorso.find(body));
             float after = closestSidePlane(posedBoxes(chest, "_lid"), model);
             assertTrue(after >= 0.05F, pet.name() + ": the open lid is " + after + " from a side plane of the model");
-            float moved = chest.getChild("left_body").z * pet.scale();
+            float moved = (chest.getChild("left_body").z - placedZ) * pet.scale();
             assertTrue(moved <= 0.2F, pet.name() + ": the bags stay attached, they moved " + moved);
             if (!pet.flushWithTorso()) {
                 assertEquals(0.0F, moved, pet.name() + ": the cat layer's own placement is left as it is");

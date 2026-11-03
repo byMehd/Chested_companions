@@ -26,13 +26,9 @@ public class CatChestLayer extends ChestLayer<CatRenderState, EntityModel<CatRen
     // the torso measured on it, hung so that their top meets the back line.
     private static final boolean OWN_BABY_MODEL = true;
     private static final float BABY_CHEST_FROM_TORSO_Y = -2.3F;
-    // An open lid lies in the plane of its hinge. Inside the torso it is buried in the body and only its upper edge shows above
-    // the back, so the hinge goes this far outside the side of the torso, in bag units (the baby wolf keeps the same 0.3).
-    private static final float BABY_HINGE_CLEARANCE = 0.3F;
     *///?} else {
     private static final boolean OWN_BABY_MODEL = false;
     private static final float BABY_CHEST_FROM_TORSO_Y = 0.0F;
-    private static final float BABY_HINGE_CLEARANCE = 0.0F;
     //?}
 
     public CatChestLayer(RenderLayerParent<CatRenderState, EntityModel<CatRenderState>> renderLayerParent) {
@@ -94,9 +90,10 @@ public class CatChestLayer extends ChestLayer<CatRenderState, EntityModel<CatRen
             float amount = Math.max(0.0F, torso.halfWidth() - TORSO_HALF_WIDTH * size) / (BAG_SCALE * size);
             if (vanillaBaby) {
                 // The kitten's own torso is wider than the adult shape the layout is tuned for, scaled down: spread the bags until
-                // the hinge clears the side of it.
+                // the hinge is flush with the side of it. The rule that keeps an open lid off the side of the torso, which runs
+                // after this, moves them the hair further that shows the lid instead of burying it in the body.
                 float hingeFromMiddle = this.positionLeftChestCube().getZ() - ChestBag.GROW;
-                amount = torso.halfWidth() / (BAG_SCALE * size) - hingeFromMiddle + BABY_HINGE_CLEARANCE;
+                amount = torso.halfWidth() / (BAG_SCALE * size) - hingeFromMiddle;
             }
             spread(chestModelPart, amount);
             return;
