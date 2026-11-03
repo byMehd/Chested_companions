@@ -42,9 +42,17 @@ class PetCopperChestTest {
         /*// AxeItem was removed. Supply the vanilla axe tag when using standalone unit registries.
         // A NeoForge test server already loads the full tag set from its resources.
         if (!stack.is(net.minecraft.tags.ItemTags.AXES)) {
-            net.minecraft.core.registries.BuiltInRegistries.ITEM.bindTags(java.util.Map.of(
-                    net.minecraft.tags.ItemTags.AXES, List.of(
-                            Items.IRON_AXE.builtInRegistryHolder(), Items.DIAMOND_AXE.builtInRegistryHolder())));
+            try {
+                var holder = item.builtInRegistryHolder();
+                var tags = new java.util.HashSet<>(holder.tags().toList());
+                tags.add(net.minecraft.tags.ItemTags.AXES);
+                var bindTags = net.minecraft.core.Holder.Reference.class
+                        .getDeclaredMethod("bindTags", java.util.Collection.class);
+                bindTags.setAccessible(true);
+                bindTags.invoke(holder, tags);
+            } catch (ReflectiveOperationException exception) {
+                throw new AssertionError("Cannot initialize the standalone axe fixture", exception);
+            }
         }
         *///?}
         return stack;
