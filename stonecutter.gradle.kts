@@ -59,6 +59,7 @@ stonecutter parameters {
         replace("Items.WAXED_OXIDIZED_COPPER_CHEST", "Items.COPPER_CHEST.waxed().oxidized()")
     }
     replacements.string(current.parsed >= "26.3") {
+        replace("VanillaRegistries.createLookup()", "VanillaRegistries.createReloadableLookup(VanillaRegistries.createWorldLookup())")
         replace("poseStack.mulPose(camera.orientation)", "poseStack.rotate(camera.orientation)")
         replace("scrape ? SoundEvents.AXE_SCRAPE : SoundEvents.AXE_WAX_OFF", "scrape ? SoundEvents.AXE_SCRAPE.value() : SoundEvents.AXE_WAX_OFF.value()")
     }
