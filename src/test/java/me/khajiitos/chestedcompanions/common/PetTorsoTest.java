@@ -1,11 +1,18 @@
 package me.khajiitos.chestedcompanions.common;
 
+import me.khajiitos.chestedcompanions.common.client.renderer.ChestBag;
 import me.khajiitos.chestedcompanions.common.client.renderer.PetTorso;
+import me.khajiitos.chestedcompanions.common.client.renderer.layer.ChestLayer;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.model.animal.feline.FelineModel;
+import net.minecraft.client.model.geom.LayerDefinitions;
+import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
+import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -89,5 +96,53 @@ class PetTorsoTest {
 
     @Test void aModelWithoutCubesHasNoTorso() {
         assertNull(PetTorso.find(new ModelPart(List.of(), Map.of())));
+    }
+
+    @Test void theVanillaWolfTorsoIsItsBodyPartAndNotItsMane() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        var layers = LayerDefinitions.createRoots();
+        ModelPart wolf = layers.get(ModelLayers.WOLF).bakeRoot();
+        PetTorso torso = PetTorso.find(wolf.getChild("body"));
+        assertNotNull(torso);
+        assertEquals(3.0F, torso.halfWidth(), 1.0E-4F);
+        assertEquals(9.0F, torso.length(), 1.0E-4F);
+        // The mane is a part of its own, wider (4 from the middle) and bigger than the body: measuring the whole model
+        // would take it for the torso.
+        assertEquals(4.0F, PetTorso.find(wolf).halfWidth(), 1.0E-4F);
+
+        PetTorso pup = PetTorso.find(layers.get(ModelLayers.WOLF_BABY).bakeRoot().getChild("body"));
+        assertNotNull(pup);
+        assertEquals(1.5F, pup.halfWidth(), 1.0E-4F);
+        assertEquals(4.5F, pup.length(), 1.0E-4F);
+    }
+
+    /** The open lids of a wolf whose body part is empty, as Entity Model Features leaves it, with this torso below it. */
+    private static float spreadOfARebuiltWolf(float torsoWidth) {
+        ModelPart torso = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(cube(-torsoWidth / 2.0F, -2.0F, -3.0F, torsoWidth, 9.0F, 6.0F)), Map.of());
+        ModelPart body = part(0.0F, 14.0F, 2.0F, PI / 2, List.of(), Map.of("EMF_body", torso));
+
+        ChestBag left = new ChestBag(new Vec3i(-8, -4, 6), false, 0, 0, 22, 11);
+        ChestBag right = new ChestBag(new Vec3i(-8, -4, -9), true, 0, 0, 22, 11);
+        ModelPart chest = new ModelPart(List.of(), Map.of(
+                "left_body", left.createBody(), "left_lid", left.createLid(0.0F),
+                "right_body", right.createBody(), "right_lid", right.createLid(0.0F)));
+        chest.setPos(body.x, body.y, body.z);
+        chest.xScale = chest.yScale = chest.zScale = 0.6F;
+        PetTorso found = PetTorso.find(body);
+        assertNotNull(found);
+        ChestLayer.keepLidsOffTheTorso(left, chest, found);
+        assertEquals(-chest.getChild("right_body").z, chest.getChild("left_body").z, 1.0E-6F, "both bags move apart together");
+        return chest.getChild("left_body").z;
+    }
+
+    @Test void aRebuiltWolfKeepsItsOpenLidsOffItsTorsoToo() {
+        // As wide as the vanilla one: the hinge plane (5 * 0.6 = 3) would lie on its side, so the bags move out a little.
+        assertEquals(ChestBag.LID_CLEARANCE, spreadOfARebuiltWolf(6.0F), 1.0E-4F);
+        // Slightly narrower: the plane is 0.1 outside the torso, which is still too close, so the bags move the rest of the way.
+        assertEquals(ChestBag.LID_CLEARANCE - (3.0F - 2.9F) / 0.6F, spreadOfARebuiltWolf(5.8F), 1.0E-4F);
+        // Narrower or much wider ones leave the bags where they are, floating clear of the torso or burying their lids in it.
+        assertEquals(0.0F, spreadOfARebuiltWolf(4.0F));
+        assertEquals(0.0F, spreadOfARebuiltWolf(9.0F));
     }
 }
