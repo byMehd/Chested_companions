@@ -135,7 +135,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          # Minecraft 26 runs on Java 25, 1.21 on Java 21; the jobs below start the game with the JDK they install.
+          # Minecraft 26 runs on Java 25 (see the hidden client job).
           java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
       - name: Play the gameplay scenarios on a dedicated server
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          # Minecraft 26 runs on Java 25, 1.21 on Java 21; the jobs below start the game with the JDK they install.
+          # Minecraft 26 runs on Java 25 (see the hidden client job).
           java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
       - name: Photograph every chest type on a cat and a wolf, sitting and baby pets, a golem visit and the remove-chest button
