@@ -1,17 +1,7 @@
 plugins { id 'net.fabricmc.fabric-loom-remap' version '1.14.10' }
 apply from: rootProject.file('build-common.gradle')
-sourceSets {
-    smoke {
-        // Its sources are src/smoke in the root project, which Stonecutter processes like src/main and src/test.
-        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
-        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
-    }
-}
+apply from: rootProject.file('build-fabric-common.gradle')
 loom { createRemapConfigurations(sourceSets.smoke) }
-// Fabric API modules that load the mod's assets and data, as module:version (1.21.11 merged the old v0 module into v1).
-def bundledModules = fabric_bundled.split(',').collect { it.trim().split(':', 2) as List }
-// -Pminimum builds against the oldest loader the mod declares, to prove the declared minimum.
-def fabricLoaderVersion = project.hasProperty('minimum') ? fabric_loader_minimum : fabric_loader_version
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.officialMojangMappings()
@@ -33,61 +23,5 @@ dependencies {
         modRuntimeOnly "com.terraformersmc:modmenu:${modmenu_version}"
         modRuntimeOnly "maven.modrinth:HKKqmr2p:${mcv_fabric_version}" // More Chest Variants 1.5.14
         modRuntimeOnly "maven.modrinth:7jzrCiK0:${quad_fabric_version}" // Quad
-    }
-}
-loom {
-    mods {
-        chestedcompanions_revived { sourceSet sourceSets.main }
-        revived_smoke { sourceSet sourceSets.smoke }
-    }
-    runs {
-        client { runDir '../../run/fabric' }
-        server { runDir '../../run/fabric-server' }
-        smokeClient {
-            client()
-            source sourceSets.smoke
-            runDir '../../run/smoke-fabric'
-            vmArg '-Drevived.smoke=true'
-        }
-        smokeScreens {
-            client()
-            source sourceSets.smoke
-            runDir "../../run/${project.findProperty('screensDir') ?: 'smoke-screens'}"
-            vmArg '-Dfabric.client.gametest'
-            if (project.hasProperty('screensOnly')) vmArg "-Drevived.screens.only=${project.screensOnly}"
-        }
-        smokeServer {
-            server()
-            source sourceSets.smoke
-            runDir '../../run/smoke-fabric-server'
-            vmArg '-Drevived.smoke.server=true'
-            programArg '--nogui'
-        }
-    }
-}
-// A throw-away flat world with no mob spawning, so the scenarios play out on a quiet, predictable ground.
-tasks.matching { it.name == 'runSmokeServer' }.configureEach {
-    doFirst {
-        def runDirectory = rootProject.file('run/smoke-fabric-server')
-        runDirectory.mkdirs()
-        new File(runDirectory, 'eula.txt').text = 'eula=true' + System.lineSeparator()
-        new File(runDirectory, 'server.properties').text = [
-                'level-type=minecraft:flat', 'online-mode=false', 'spawn-monsters=false', 'spawn-animals=false',
-                'spawn-npcs=false', 'view-distance=4', 'simulation-distance=4', 'max-tick-time=-1',
-                'pause-when-empty-seconds=-1'
-        ].join(System.lineSeparator()) + System.lineSeparator()
-        project.delete(new File(runDirectory, 'world'))
-    }
-}
-processResources {
-    inputs.property 'fabric_bundled', fabric_bundled
-    // The bundled modules are declared as dependencies, at the bundled version as the minimum.
-    doLast {
-        def metadata = new File(destinationDir, 'fabric.mod.json')
-        def json = new groovy.json.JsonSlurper().parse(metadata)
-        def depends = new LinkedHashMap(json.depends)
-        bundledModules.each { module, version -> depends[module] = '>=' + version.split('\\+')[0] }
-        json.depends = depends
-        metadata.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json)) + '\n'
     }
 }

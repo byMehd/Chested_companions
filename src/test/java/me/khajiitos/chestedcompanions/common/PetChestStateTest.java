@@ -4,8 +4,6 @@ import me.khajiitos.chestedcompanions.common.util.ChestEntityCommon;
 import me.khajiitos.chestedcompanions.common.util.PetChestSounds;
 import me.khajiitos.chestedcompanions.common.util.PetChestState;
 import me.khajiitos.chestedcompanions.common.util.PetEnderChestContainer;
-import net.minecraft.SharedConstants;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -31,8 +29,7 @@ import static org.mockito.Mockito.*;
 
 class PetChestStateTest {
     @BeforeAll static void bootstrap() {
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        TestBootstrap.run();
     }
 
     private static void verifySound(PetFixture fixture, SoundEvent sound, int times) {

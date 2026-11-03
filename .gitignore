@@ -1,6 +1,7 @@
 .gradle/
 **/build/
 run/
+__pycache__/
 tools/
 research/
 upstream/

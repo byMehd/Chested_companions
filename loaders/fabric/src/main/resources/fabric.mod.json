@@ -23,9 +23,9 @@
     "chestedcompanions.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.17.3",
+    "fabricloader": ">=${fabric_loader_minimum}",
     "minecraft": "${minecraft_version}",
-    "java": ">=21"
+    "java": ">=${java_version}"
   },
   "suggests": {
     "cloth-config": "*",

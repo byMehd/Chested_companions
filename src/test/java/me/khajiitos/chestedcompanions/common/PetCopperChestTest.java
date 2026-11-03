@@ -1,10 +1,8 @@
 package me.khajiitos.chestedcompanions.common;
 
 import me.khajiitos.chestedcompanions.common.util.PetCopperChest;
-import net.minecraft.SharedConstants;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Abilities;
@@ -25,8 +23,7 @@ import static org.mockito.Mockito.*;
 
 class PetCopperChestTest {
     static {
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        TestBootstrap.run();
     }
 
     private static final List<Item> UNWAXED = List.of(Items.COPPER_CHEST, Items.EXPOSED_COPPER_CHEST,

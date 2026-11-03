@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import me.khajiitos.chestedcompanions.common.client.renderer.PetTorso;
 import me.khajiitos.chestedcompanions.common.config.CCConfig;
 import me.khajiitos.chestedcompanions.common.mixin.accessor.CatModelAccessor;
-import net.minecraft.client.model.animal.feline.CatModel;
+import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
@@ -13,15 +13,24 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
-public class CatChestLayer extends ChestLayer<CatRenderState, CatModel> {
+public class CatChestLayer extends ChestLayer<CatRenderState, EntityModel<CatRenderState>> {
     private static final float BAG_SCALE = 0.6F;
     // The vanilla cat: its torso is a 4x16x6 box, and the chest part sits this far from the middle of it.
     private static final float TORSO_LENGTH = 16.0F;
     private static final float TORSO_HALF_WIDTH = 2.0F;
     private static final float CHEST_FROM_TORSO_Y = -3.0F;
     private static final float CHEST_FROM_TORSO_Z = -11.0F;
+    //? if >=26.1 {
+    /*// Since 26.1 the baby cat has a model of its own, whose torso is not the adult one scaled down: the bags are placed on
+    // the torso measured on it, hung so that their top meets the back line.
+    private static final boolean OWN_BABY_MODEL = true;
+    private static final float BABY_CHEST_FROM_TORSO_Y = -2.3F;
+    *///?} else {
+    private static final boolean OWN_BABY_MODEL = false;
+    private static final float BABY_CHEST_FROM_TORSO_Y = 0.0F;
+    //?}
 
-    public CatChestLayer(RenderLayerParent<CatRenderState, CatModel> renderLayerParent) {
+    public CatChestLayer(RenderLayerParent<CatRenderState, EntityModel<CatRenderState>> renderLayerParent) {
         super(renderLayerParent);
     }
 
@@ -64,12 +73,14 @@ public class CatChestLayer extends ChestLayer<CatRenderState, CatModel> {
         chestModelPart.yRot = HALF_PI;
         chestModelPart.zRot = HALF_PI;
 
-        PetTorso torso = isRebuilt(catBody) ? PetTorso.find(catBody) : null;
+        boolean rebuilt = isRebuilt(catBody);
+        boolean vanillaBaby = OWN_BABY_MODEL && catRenderState.isBaby && !rebuilt;
+        PetTorso torso = rebuilt || vanillaBaby ? PetTorso.find(catBody) : null;
         if (torso != null) {
             // Keep the vanilla layout, but measured from the real torso: a baby, a fat or a rebuilt cat follows.
             float size = Mth.clamp(torso.length() / TORSO_LENGTH, 0.25F, 4.0F);
             chestModelPart.x = torso.x();
-            chestModelPart.y = torso.y() + CHEST_FROM_TORSO_Y * size;
+            chestModelPart.y = torso.y() + (vanillaBaby ? BABY_CHEST_FROM_TORSO_Y : CHEST_FROM_TORSO_Y * size);
             chestModelPart.z = torso.z() + CHEST_FROM_TORSO_Z * size;
             chestModelPart.xScale = BAG_SCALE * size;
             chestModelPart.yScale = BAG_SCALE * size;

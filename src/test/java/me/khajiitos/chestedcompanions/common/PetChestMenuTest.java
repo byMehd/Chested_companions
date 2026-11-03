@@ -4,9 +4,7 @@ import me.khajiitos.chestedcompanions.common.config.CCConfig;
 import me.khajiitos.chestedcompanions.common.util.PetChestMenu;
 import me.khajiitos.chestedcompanions.common.util.PetEnderChestContainer;
 import me.khajiitos.chestedcompanions.common.util.PetMenuProvider;
-import net.minecraft.SharedConstants;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EntityEquipment;
 import net.minecraft.world.entity.player.Abilities;
@@ -30,8 +28,7 @@ import static org.mockito.Mockito.*;
 /** The button of the pet's screen takes the chest off like shears do, and only for somebody who may open it. */
 class PetChestMenuTest {
     @BeforeAll static void bootstrap() {
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        TestBootstrap.run();
     }
 
     @BeforeEach void privateChests() {

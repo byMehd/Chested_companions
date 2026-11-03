@@ -3,8 +3,6 @@ package me.khajiitos.chestedcompanions.common;
 import me.khajiitos.chestedcompanions.common.config.CCConfig;
 import me.khajiitos.chestedcompanions.common.golem.IPetPickupGolem;
 import me.khajiitos.chestedcompanions.common.golem.PetChestPickupBehavior;
-import net.minecraft.SharedConstants;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.TamableAnimal;
@@ -45,8 +43,7 @@ class PetChestPickupBehaviorTest {
     private PetChestPickupBehavior behavior;
 
     @BeforeAll static void bootstrap() {
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        TestBootstrap.run();
     }
 
     @SuppressWarnings("unchecked")

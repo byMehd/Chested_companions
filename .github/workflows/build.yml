@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9']
+        mc: ['1.21.11', '1.21.10', '1.21.9', '26.1.2']
         loader: [fabric, neoforge, forge]
         profile: [minimum, current]
     steps:
@@ -92,12 +92,16 @@ jobs:
           - { mc: '1.21.9', loader: '0.17.3', optional: without-optional-mods }
           - { mc: '1.21.9', loader: '0.20.1', optional: without-optional-mods }
           - { mc: '1.21.9', loader: '0.20.1', optional: with-optional-mods }
+          - { mc: '26.1.2', loader: '0.18.4', optional: without-optional-mods }
+          - { mc: '26.1.2', loader: '0.20.1', optional: without-optional-mods }
+          - { mc: '26.1.2', loader: '0.20.1', optional: with-optional-mods }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          # Minecraft 26 runs on Java 25, 1.21 on Java 21; the jobs below start the game with the JDK they install.
+          java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
       - name: Start invisible client and verify loading
         shell: bash
@@ -125,13 +129,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9']
+        mc: ['1.21.11', '1.21.10', '1.21.9', '26.1.2']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          # Minecraft 26 runs on Java 25, 1.21 on Java 21; the jobs below start the game with the JDK they install.
+          java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
       - name: Play the gameplay scenarios on a dedicated server
         shell: bash
@@ -158,13 +163,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9']
+        mc: ['1.21.11', '1.21.10', '1.21.9', '26.1.2']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          # Minecraft 26 runs on Java 25, 1.21 on Java 21; the jobs below start the game with the JDK they install.
+          java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
       - name: Photograph every chest type on a cat and a wolf, sitting and baby pets, a golem visit and the remove-chest button
         shell: bash

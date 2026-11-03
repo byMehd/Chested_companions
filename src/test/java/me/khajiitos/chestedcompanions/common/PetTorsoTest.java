@@ -1,7 +1,12 @@
 package me.khajiitos.chestedcompanions.common;
 
 import me.khajiitos.chestedcompanions.common.client.renderer.PetTorso;
+//? if >=26.1 {
+/*import net.minecraft.client.model.animal.feline.AdultFelineModel;
+import net.minecraft.client.model.animal.feline.BabyFelineModel;
+*///?} else {
 import net.minecraft.client.model.animal.feline.FelineModel;
+//?}
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
@@ -30,8 +35,15 @@ class PetTorsoTest {
     }
 
     private static ModelPart vanillaBody(boolean baby) {
+        //? if >=26.1 {
+        /*// The baby cat has a model of its own since 26.1.
+        LayerDefinition layer = baby ? BabyFelineModel.createBabyLayer()
+                : LayerDefinition.create(AdultFelineModel.createBodyMesh(CubeDeformation.NONE), 64, 32);
+        return layer.bakeRoot().getChild("body");
+        *///?} else {
         LayerDefinition layer = LayerDefinition.create(FelineModel.createBodyMesh(CubeDeformation.NONE), 64, 32);
         return (baby ? layer.apply(FelineModel.BABY_TRANSFORMER) : layer).bakeRoot().getChild("body");
+        //?}
     }
 
     @Test void theVanillaCatTorsoIsFoundWhereTheLayerExpectsIt() {
@@ -48,12 +60,22 @@ class PetTorsoTest {
         assertEquals(body.z, torso.z() - 11.0F, 1.0E-4F);
     }
 
+    //? if >=26.1 {
+    /*// Since 26.1 the baby is a box of its own (4 wide, 3 high, 7 long) instead of the adult one scaled down by half.
+    @Test void aBabyCatTorsoIsItsOwnShorterBox() {
+        PetTorso torso = PetTorso.find(vanillaBody(true));
+        assertNotNull(torso);
+        assertEquals(7.0F, torso.length(), 1.0E-3F);
+        assertEquals(2.0F, torso.halfWidth(), 1.0E-3F);
+    }
+    *///?} else {
     @Test void aBabyCatTorsoIsHalfAsLongAndTheSameBagsScaleDownWithIt() {
         PetTorso torso = PetTorso.find(vanillaBody(true));
         assertNotNull(torso);
         assertEquals(8.0F, torso.length(), 1.0E-3F);
         assertEquals(1.0F, torso.halfWidth(), 1.0E-3F);
     }
+    //?}
 
     @Test void aRebuiltCatIsMeasuredThroughEveryPartAboveItsTorso() {
         // The shape Entity Model Features gives Fresh Animations: an empty body part, and the animal below it.

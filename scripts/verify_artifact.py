@@ -34,7 +34,7 @@ with zipfile.ZipFile(jars[0]) as jar:
         assert 'fabric-resource-loader-v1' in bundled, 'Standalone resource loader must be bundled'
         for module in bundled:
             assert any(name.startswith(f'META-INF/jars/{module}-') for name in names), f'{module} is declared but not bundled'
-        assert (minecraft == '1.21.11') == ('fabric-resource-loader-v0' not in bundled), 'The old resource loader module is bundled up to 1.21.10 only'
+        assert (minecraft in ('1.21.10', '1.21.9')) == ('fabric-resource-loader-v0' in bundled), 'The old resource loader module is bundled up to 1.21.10 only'
     tag = json.loads(jar.read('data/chestedcompanions/tags/item/pet_chest_item.json'))
     assert 'minecraft:ender_chest' in tag['values']
     copper_variants = {
