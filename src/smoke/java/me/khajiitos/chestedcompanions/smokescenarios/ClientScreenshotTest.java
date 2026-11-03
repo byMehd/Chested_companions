@@ -21,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.Heightmap;
 
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -224,7 +224,7 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
         context.getInput().setCursorPos(button[0], button[1]);
         context.waitTicks(25);
         context.takeScreenshot(PREFIX + "gui_pet_chest_hover");
-        context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         context.waitTicks(15);
 
         boolean closed = context.computeOnClient(client -> client.screen == null);

@@ -7,7 +7,9 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
+//? if <26.3 {
 import net.minecraft.world.item.AxeItem;
+//?}
 import net.minecraft.world.item.HoneycombItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -120,7 +122,11 @@ public final class PetCopperChest {
             }
             return true;
         }
+        //? if >=26.3 {
+        /*if (held.is(ItemTags.AXES)) {
+        *///?} else {
         if (held.is(ItemTags.AXES) || held.getItem() instanceof AxeItem) {
+        //?}
             Optional<Item> scraped = previous(chest);
             Optional<Item> unwaxed = scraped.isPresent() ? Optional.empty() : unwaxed(chest);
             if (scraped.isEmpty() && unwaxed.isEmpty()) {
