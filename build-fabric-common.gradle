@@ -32,6 +32,7 @@ loom {
             runDir "../../run/${project.findProperty('screensDir') ?: 'smoke-screens'}"
             vmArg '-Dfabric.client.gametest'
             if (project.hasProperty('screensOnly')) vmArg "-Drevived.screens.only=${project.screensOnly}"
+            if (project.hasProperty('withFatCat')) vmArg '-Drevived.screens.fatcat=true'
         }
         smokeServer {
             server()

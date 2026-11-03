@@ -60,6 +60,16 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
     @Override
     public void runTest(ClientGameTestContext context) {
         context.runOnClient(client -> {
+            if (Boolean.getBoolean("revived.screens.fatcat")) {
+                var loader = net.fabricmc.loader.api.FabricLoader.getInstance();
+                if (!loader.isModLoaded("entity_model_features") || !loader.isModLoaded("entity_texture_features"))
+                    throw new AssertionError("Fat Cat rendering requires EMF and ETF");
+                var model = client.getResourceManager().getResource(
+                        Identifier.fromNamespaceAndPath("minecraft", "optifine/cem/cat.jem")).orElseThrow();
+                if (!model.sourcePackId().equals("file/fat-cat-test.zip"))
+                    throw new AssertionError("The Fat Cat test pack must be active before taking screenshots");
+                System.out.println("REVIVED_FAT_CAT_PACK_ACTIVE: original model and textures, test-only pack metadata");
+            }
             client.options.hideGui = true;
             client.options.fov().set(40);
             // A short render distance: on a small CI runner the client's chunk meshing starves the world loading, which
