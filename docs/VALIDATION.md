@@ -23,7 +23,7 @@ Local verification completed on 3 November 2026. CI runs the same suites on ever
 | More Chest Variants + Quad on NeoForge | Passed; all 69 tests, including all twelve optional chest variants |
 | More Chest Variants + Quad on hidden Fabric client | Passed; registered items and pale oak texture verified |
 | Real dedicated server scenarios | Passed locally and in CI |
-| Real client scenarios, including the real click on the remove-chest button | Passed locally (61 screenshots). In CI this job is best effort: see below |
+| Real client scenarios, including the real click on the remove-chest button | Passed locally (61 screenshots). In CI it warns instead of failing when the runner cannot load the world: see below |
 | More Chest Variants 1.5.14 chests (cherry and pale oak) on a cat and a wolf, real client | Rendered correctly |
 | Fresh Animations 1.11.2 on EMF 3.3.12 and ETF 7.2.6, real client | Saddlebags on the torso standing, sitting and as a kitten; golem visit renders |
 | The same, with Sodium 0.8.14, Iris 1.10.8, Entity Culling 1.11.3 and ImmediatelyFast 1.14.3, real client | Same result, no error from this mod |
@@ -31,7 +31,7 @@ Local verification completed on 3 November 2026. CI runs the same suites on ever
 
 The original Forge 61.0.0 minimum failed inside Forge's own reconstructed `EntitySelectorParser` sources (ambiguous `Doubles` imports), before compiling this mod. Forge 61.0.1 explicitly fixes its user-development patches and is the declared minimum.
 
-The real-client CI job is best effort. On 2 November 2026 GitHub's shared runners stopped loading its software-rendered world in time ("Timeout loading world", the server stuck at "Preparing spawn area: 16%"), for every commit, including one that had passed that morning and was rerun as a control. The job therefore retries once, runs the scenes at a render distance of 3, and no longer fails the workflow; the unit tests, the dedicated-server scenarios and the hidden-client jobs stay mandatory. Capping the client's frame rate makes it worse, because the gametest ties the server to the client's frames.
+The real-client CI job is best effort when the runner is too slow. On 2 November 2026 GitHub's shared runners stopped loading its software-rendered world in time ("Timeout loading world", the server stuck at "Preparing spawn area: 16%"), for every commit, including one that had passed that morning and was rerun as a control. The job therefore retries once, runs the scenes at a render distance of 3, and raises a warning instead of failing when that timeout is the only problem; any other failure, such as a scenario assertion, still fails it. The unit tests, the dedicated-server scenarios and the hidden-client jobs stay mandatory. Capping the client's frame rate makes it worse, because the gametest ties the server to the client's frames.
 
 Fat Cat 1.0 is refused by Minecraft 1.21.11 as published: its `pack.mcmeta` lacks the format fields the game now requires. The check above used a copy with only that file changed.
 
