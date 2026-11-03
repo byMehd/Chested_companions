@@ -3,6 +3,7 @@ package me.khajiitos.chestedcompanions.common.client.renderer.layer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import me.khajiitos.chestedcompanions.common.client.renderer.ChestBag;
 import me.khajiitos.chestedcompanions.common.client.renderer.PetRenderTypes;
+import me.khajiitos.chestedcompanions.common.client.renderer.PetTorso;
 import me.khajiitos.chestedcompanions.common.util.IChestEntityRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
@@ -101,6 +102,24 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
         chestModelPart.getChild("right_lid").z -= amount;
     }
 
+    /**
+     * Keeps the plane an open lid stands in off the side of the torso, measured on the model as it is posed, whatever
+     * the pet or the resource pack made of it: see {@link ChestBag#spreadToClear}.
+     */
+    private void keepLidsOffTheTorso(ModelPart chestModelPart) {
+        PetTorso torso = PetTorso.find(this.getParentModelBody());
+        if (torso != null) keepLidsOffTheTorso(this.bags[0], chestModelPart, torso);
+    }
+
+    /** The part of {@link #keepLidsOffTheTorso(ModelPart)} that needs no model: moves the bags of a placed chest part. */
+    public static void keepLidsOffTheTorso(ChestBag bag, ModelPart chestModelPart, PetTorso torso) {
+        float scale = chestModelPart.zScale;
+        float hinge = (bag.hingeDistance() + chestModelPart.getChild("left_body").z) * scale;
+        // The two planes are the same distance from the middle of the chest part: the nearer one to the torso counts.
+        float plane = hinge - Math.abs(chestModelPart.x - torso.x());
+        spread(chestModelPart, ChestBag.spreadToClear(plane, torso.halfWidth(), scale));
+    }
+
     @Override
     public void submit(@NotNull PoseStack poseStack, @NotNull SubmitNodeCollector collector, int pPackedLight, @NotNull T renderState, float v, float v1) {
         if (!(renderState instanceof IChestEntityRenderState chestEntityRenderState) || !chestEntityRenderState.chestedCompanions$hasChest()) {
@@ -119,6 +138,7 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
                 "left_body", sides[0].createBody(), "left_lid", sides[0].createLid(angle),
                 "right_body", sides[1].createBody(), "right_lid", sides[1].createLid(angle)));
         this.setupPosition(renderState, part);
+        this.keepLidsOffTheTorso(part);
         collector.submitModelPart(part, poseStack,
                 PetRenderTypes.entityCutoutNoCull(getTexture(chestEntityRenderState.chestedCompanions$getChestItemStack())),
                 pPackedLight, LivingEntityRenderer.getOverlayCoords(renderState, 0.f), null);
