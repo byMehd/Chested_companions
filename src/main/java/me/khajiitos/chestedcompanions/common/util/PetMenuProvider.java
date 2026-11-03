@@ -10,15 +10,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Opens a pet's chest. Its title is the pet's name wrapped in {@value #TITLE_KEY}, a translation that shows the name
- * unchanged: that is how the client knows the screen it just opened belongs to a pet and adds the remove-chest button.
+ * Opens a pet's chest. Its title is the pet's name and the name of its chest ("Cat - Chest", "Wolf - Ender Chest"),
+ * built by {@value #TITLE_KEY}: that is also how the client knows the screen it just opened belongs to a pet and adds
+ * the remove-chest button.
  */
 public record PetMenuProvider<T extends TamableAnimal & IChestEntity>(T pet) implements MenuProvider {
     public static final String TITLE_KEY = "container.chestedcompanions.pet_chest";
 
     @Override
     public @NotNull Component getDisplayName() {
-        return Component.translatable(TITLE_KEY, this.pet.getDisplayName());
+        return Component.translatable(TITLE_KEY, this.pet.getDisplayName(), this.pet.chestedCompanions$getChestItemStack().getItemName());
     }
 
     @Nullable

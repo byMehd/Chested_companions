@@ -73,7 +73,7 @@ class PetChestMenuTest {
         verify(fixture.pet, times(1)).spawnAtLocation(eq(fixture.level), argThat((ItemStack s) -> s.is(Items.COPPER_CHEST)), eq(0.25F));
     }
 
-    @Test void creativePlayersGetTheContentsButNotTheChestItem() {
+    @Test void creativePlayersGetTheChestBackToo() {
         PetFixture fixture = new PetFixture(new ItemStack(Items.CHEST), 9);
         fixture.inventory.get().setItem(3, new ItemStack(Items.EMERALD, 2));
         Player owner = fixture.ownerNearby();
@@ -85,7 +85,7 @@ class PetChestMenuTest {
 
         assertTrue(fixture.chest.get().isEmpty());
         verify(fixture.pet, times(1)).spawnAtLocation(eq(fixture.level), argThat((ItemStack s) -> s.is(Items.EMERALD)), eq(0.25F));
-        verify(fixture.pet, never()).spawnAtLocation(eq(fixture.level), argThat((ItemStack s) -> s.is(Items.CHEST)), anyFloat());
+        verify(fixture.pet, times(1)).spawnAtLocation(eq(fixture.level), argThat((ItemStack s) -> s.is(Items.CHEST)), eq(0.25F));
     }
 
     @Test void somebodyWithoutAccessCannotUseTheButton() {
@@ -134,11 +134,16 @@ class PetChestMenuTest {
         assertEquals(3, ender.getItem(0).getCount(), "Ender contents never belong to the pet");
     }
 
-    @Test void theScreenIsRecognisedByAnUnchangedTitleOfTheWrappedPetName() {
-        PetFixture fixture = new PetFixture(new ItemStack(Items.CHEST), 9);
-        when(fixture.pet.getDisplayName()).thenReturn(net.minecraft.network.chat.Component.literal("Misty"));
-        var title = new PetMenuProvider<>(fixture.pet).getDisplayName();
-        assertTrue(title.getContents() instanceof TranslatableContents contents && contents.getKey().equals(PetMenuProvider.TITLE_KEY));
-        assertEquals("Misty", ((TranslatableContents) title.getContents()).getArgs()[0] instanceof net.minecraft.network.chat.Component name ? name.getString() : null);
+    @Test void theScreenTitleNamesThePetAndItsChestLikeAVanillaChestScreen() {
+        for (var chest : java.util.List.of(Items.CHEST, Items.ENDER_CHEST, Items.COPPER_CHEST)) {
+            PetFixture fixture = new PetFixture(new ItemStack(chest), 9);
+            when(fixture.pet.getDisplayName()).thenReturn(net.minecraft.network.chat.Component.literal("Misty"));
+            var title = new PetMenuProvider<>(fixture.pet).getDisplayName();
+            assertTrue(title.getContents() instanceof TranslatableContents contents && contents.getKey().equals(PetMenuProvider.TITLE_KEY));
+            Object[] args = ((TranslatableContents) title.getContents()).getArgs();
+            assertEquals(2, args.length);
+            assertEquals("Misty", ((net.minecraft.network.chat.Component) args[0]).getString());
+            assertEquals(new ItemStack(chest).getItemName(), args[1]);
+        }
     }
 }

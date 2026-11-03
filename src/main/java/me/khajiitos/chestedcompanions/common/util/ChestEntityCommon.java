@@ -63,11 +63,11 @@ public class ChestEntityCommon {
     }
 
     /**
-     * Takes the chest off the pet: the contents always drop, and so does the chest itself unless the player is in
-     * creative mode. Shears and the remove button of the pet's screen both end up here.
+     * Takes the chest off the pet: the chest and its contents drop, whatever the game mode. Shears and the remove button
+     * of the pet's screen both end up here.
      */
     public static <T extends TamableAnimal & IChestEntity> void takeChestOff(T chestEntity, Player player) {
-        chestEntity.chestedCompanions$removeChestContent(!player.getAbilities().instabuild);
+        chestEntity.chestedCompanions$removeChestContent(true);
         chestEntity.playSound(SoundEvents.DONKEY_CHEST, 1.0F, 1.5F);
     }
 

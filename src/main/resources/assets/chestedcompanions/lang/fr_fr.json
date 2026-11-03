@@ -50,6 +50,6 @@
   "chestedcompanions.config.copperGolemsUsePetChests.name": "Les golems de cuivre utilisent les coffres des animaux",
   "chestedcompanions.config.copperGolemsUsePetChests.description": "Les golems de cuivre prennent des objets dans le coffre en cuivre d'un animal proche, comme dans un coffre en cuivre posé",
 
-  "container.chestedcompanions.pet_chest": "%s",
+  "container.chestedcompanions.pet_chest": "%s - %s",
   "gui.chestedcompanions.remove_chest": "Retirer le coffre\nLe coffre et tout son contenu tombent au sol"
 }
