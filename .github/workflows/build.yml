@@ -9,6 +9,12 @@ on:
   pull_request:
     paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
+    inputs:
+      minecraft:
+        description: Minecraft version to validate (all runs the complete matrix)
+        type: choice
+        default: all
+        options: [all, '26.2', '26.3']
 
 permissions:
   contents: read
@@ -25,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9', '26.1.2']
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2"]') }}
         loader: [fabric, neoforge, forge]
         profile: [minimum, current]
     steps:
@@ -76,25 +82,14 @@ jobs:
           if-no-files-found: ignore
 
   hidden-client:
-    name: Hidden Fabric ${{ matrix.mc }} ${{ matrix.loader }} / ${{ matrix.optional }}
+    name: Hidden Fabric ${{ matrix.mc }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { mc: '1.21.11', loader: '0.17.3', optional: without-optional-mods }
-          - { mc: '1.21.11', loader: '0.20.1', optional: without-optional-mods }
-          - { mc: '1.21.11', loader: '0.20.1', optional: with-optional-mods }
-          - { mc: '1.21.10', loader: '0.17.3', optional: without-optional-mods }
-          - { mc: '1.21.10', loader: '0.20.1', optional: without-optional-mods }
-          - { mc: '1.21.10', loader: '0.20.1', optional: with-optional-mods }
-          - { mc: '1.21.9', loader: '0.17.3', optional: without-optional-mods }
-          - { mc: '1.21.9', loader: '0.20.1', optional: without-optional-mods }
-          - { mc: '1.21.9', loader: '0.20.1', optional: with-optional-mods }
-          - { mc: '26.1.2', loader: '0.18.4', optional: without-optional-mods }
-          - { mc: '26.1.2', loader: '0.20.1', optional: without-optional-mods }
-          - { mc: '26.1.2', loader: '0.20.1', optional: with-optional-mods }
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2"]') }}
+        profile: [minimum, current, optional]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -108,15 +103,20 @@ jobs:
         run: |
           chmod +x gradlew
           optional=()
-          if [[ '${{ matrix.optional }}' == with-optional-mods ]]; then optional+=(-PwithOptionalMods); fi
+          if [[ '${{ matrix.profile }}' == optional ]]; then optional+=(-PwithOptionalMods); fi
+          loader=$(sed -n 's/^fabric_loader_version=//p' gradle.properties)
+          if [[ '${{ matrix.profile }}' == minimum ]]; then
+            loader=$(sed -n 's/^fabric_loader_minimum=//p' versions/${{ matrix.mc }}-fabric/gradle.properties)
+            if [[ -z "$loader" ]]; then loader=$(sed -n 's/^fabric_loader_minimum=//p' gradle.properties); fi
+          fi
           set -o pipefail
-          xvfb-run -a ./gradlew :${{ matrix.mc }}-fabric:runSmokeClient --console=plain '-Pfabric_loader_version=${{ matrix.loader }}' "${optional[@]}" | tee client-smoke.log
+          xvfb-run -a ./gradlew :${{ matrix.mc }}-fabric:runSmokeClient --console=plain "-Pfabric_loader_version=$loader" "${optional[@]}" | tee client-smoke.log
           grep -q 'REVIVED_CLIENT_SMOKE_PASSED' client-smoke.log
       - name: Upload client diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: hidden-client-${{ matrix.mc }}-${{ matrix.loader }}-${{ matrix.optional }}
+          name: hidden-client-${{ matrix.mc }}-${{ matrix.profile }}
           path: |
             client-smoke.log
             run/smoke-fabric/logs/
@@ -129,7 +129,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9', '26.1.2']
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2"]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -163,7 +163,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9', '26.1.2']
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2"]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
