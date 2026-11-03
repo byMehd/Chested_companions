@@ -39,14 +39,14 @@ def download(version):
 
 def main():
     minecraft = sys.argv[1]
-    dependencies = Path("research/fatcat-dependencies") / minecraft
+    directory = Path("run") / f"fatcat-{minecraft}"
+    dependencies = directory / "mods"
     dependencies.mkdir(parents=True, exist_ok=True)
     for version in VERSIONS[minecraft]:
         filename, data = download(version)
         (dependencies / filename).write_bytes(data)
 
     _, pack = download("APZ38UeW")
-    directory = Path("run/fatcat")
     (directory / "resourcepacks").mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(BytesIO(pack)) as original, zipfile.ZipFile(
         directory / "resourcepacks/fat-cat-test.zip", "w", zipfile.ZIP_DEFLATED
@@ -57,7 +57,7 @@ def main():
                 metadata = json.loads(data)
                 metadata["pack"].pop("pack_format", None)
                 metadata["pack"].pop("supported_formats", None)
-                metadata["pack"].update(min_format=0, max_format=999)
+                metadata["pack"].update(min_format=65, max_format=999)
                 data = json.dumps(metadata).encode()
             fixture.writestr(entry, data)
     (directory / "options.txt").write_text(

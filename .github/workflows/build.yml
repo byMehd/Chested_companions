@@ -192,7 +192,7 @@ jobs:
     name: Real client rendering (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
     env:
-      SCREENS_DIR: ${{ inputs.visual == 'fatcat' && 'fatcat' || 'smoke-screens' }}
+      SCREENS_DIR: ${{ inputs.visual == 'fatcat' && format('fatcat-{0}', matrix.mc) || 'smoke-screens' }}
       SDL_VIDEO_FORCE_EGL: ${{ matrix.mc == '26.3' && '1' || '0' }}
       SDL_VIDEODRIVER: x11
       LIBGL_ALWAYS_SOFTWARE: '1'
@@ -229,7 +229,7 @@ jobs:
           # pass on a real machine. That alone only raises a warning; any other failure still fails the job.
           arguments=(-PwithGameTest)
           if [[ '${{ inputs.visual }}' == fatcat ]]; then
-            arguments+=(-PwithFatCat -PscreensDir=fatcat -PscreensOnly=cats,sitting,baby)
+            arguments+=(-PwithFatCat "-PscreensDir=$SCREENS_DIR" -PscreensOnly=cats,sitting,baby)
           fi
           played=
           for attempt in 1 2; do
