@@ -143,6 +143,11 @@ jobs:
     name: Real client rendering (Fabric)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Best effort. On 2 November 2026 GitHub's shared runners stopped loading this software-rendered client's world in
+    # time, for every commit including one that had passed that morning ("Timeout loading world"), while the scenarios
+    # themselves pass on a real machine. The unit tests, the dedicated-server scenarios and the hidden-client jobs stay
+    # mandatory; this one keeps uploading screenshots whenever the runner cooperates.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -156,7 +161,7 @@ jobs:
           chmod +x gradlew
           set -o pipefail
           # A shared runner is sometimes too slow for the software-rendered client to load its world in time.
-          for attempt in 1 2 3; do
+          for attempt in 1 2; do
             rm -rf run/smoke-screens/screenshots
             if xvfb-run -a ./gradlew :1.21.11-fabric:runSmokeScreens -PwithGameTest --console=plain | tee -a screenshots.log; then break; fi
             echo "Attempt $attempt failed"
