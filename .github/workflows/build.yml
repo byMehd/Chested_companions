@@ -231,7 +231,7 @@ jobs:
             fi
             exit 1
           fi
-          test "$(ls run/smoke-screens/screenshots/*.png | wc -l)" -eq 61
+          test "$(ls run/smoke-screens/screenshots/*.png | wc -l)" -eq 67
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v7

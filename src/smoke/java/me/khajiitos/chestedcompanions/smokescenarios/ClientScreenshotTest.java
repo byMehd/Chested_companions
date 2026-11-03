@@ -145,15 +145,18 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             setLid(world, uuid, true);
             context.waitTicks(14);
             context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_copper_sitting_a_open");
+            look(world, groundY, -1);
+            context.waitTicks(8);
+            context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_copper_sitting_b_open");
             discard(world, uuid);
         }
     }
 
-    /** Kittens and pups wear the bags at half size, standing and sitting. */
+    /** Kittens and pups wear the bags at half size, standing and sitting, with the lid open, seen from both flanks. */
     private static void babyPets(ClientGameTestContext context, TestSingleplayerContext world, int groundY) {
         for (boolean wolf : new boolean[]{false, true}) {
             for (boolean sitting : new boolean[]{false, true}) {
-                String name = (wolf ? "wolf" : "cat") + "_copper_baby" + (sitting ? "_sitting" : "") + "_a_open";
+                String name = (wolf ? "wolf" : "cat") + "_copper_baby" + (sitting ? "_sitting" : "");
                 UUID uuid = spawnPet(world, groundY, wolf, Items.COPPER_CHEST);
                 world.getServer().runOnServer(server -> {
                     TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
@@ -164,7 +167,10 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
                 look(world, groundY, 1);
                 setLid(world, uuid, true);
                 context.waitTicks(22);
-                context.takeScreenshot(PREFIX + name);
+                context.takeScreenshot(PREFIX + name + "_a_open");
+                look(world, groundY, -1);
+                context.waitTicks(8);
+                context.takeScreenshot(PREFIX + name + "_b_open");
                 discard(world, uuid);
             }
         }
