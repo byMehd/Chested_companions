@@ -115,6 +115,12 @@ jobs:
           # Minecraft 26 runs on Java 25, 1.21 on Java 21; the jobs below start the game with the JDK they install.
           java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
+      - name: Install SDL OpenGL runtime
+        if: matrix.mc == '26.3'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libegl1 libegl-mesa0 libgl1-mesa-dri libglx-mesa0 mesa-utils
+          ldconfig -p | grep -E 'lib(EGL|GLX|GL)\.so'
       - name: Start invisible client and verify loading
         shell: bash
         run: |
@@ -195,6 +201,12 @@ jobs:
           # Minecraft 26 runs on Java 25 (see the hidden client job).
           java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
+      - name: Install SDL OpenGL runtime
+        if: matrix.mc == '26.3'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libegl1 libegl-mesa0 libgl1-mesa-dri libglx-mesa0 mesa-utils
+          ldconfig -p | grep -E 'lib(EGL|GLX|GL)\.so'
       - name: Photograph every chest type on a cat and a wolf, sitting and baby pets, a golem visit and the remove-chest button
         shell: bash
         run: |
