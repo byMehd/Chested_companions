@@ -39,9 +39,13 @@ class PetCopperChestTest {
     private static ItemStack axe(Item item) {
         ItemStack stack = new ItemStack(item);
         //? if >=26.3 {
-        /*// AxeItem was removed. Standalone unit registries do not load vanilla item tags.
-        stack = spy(stack);
-        doReturn(true).when(stack).is(net.minecraft.tags.ItemTags.AXES);
+        /*// AxeItem was removed. Supply the vanilla axe tag when using standalone unit registries.
+        // A NeoForge test server already loads the full tag set from its resources.
+        if (!stack.is(net.minecraft.tags.ItemTags.AXES)) {
+            net.minecraft.core.registries.BuiltInRegistries.ITEM.bindTags(java.util.Map.of(
+                    net.minecraft.tags.ItemTags.AXES, List.of(
+                            Items.IRON_AXE.builtInRegistryHolder(), Items.DIAMOND_AXE.builtInRegistryHolder())));
+        }
         *///?}
         return stack;
     }
