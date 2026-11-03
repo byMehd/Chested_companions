@@ -96,6 +96,11 @@ jobs:
     if: inputs.checks != 'build'
     name: Hidden Fabric ${{ matrix.mc }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
+    env:
+      # SDL 3 cannot find a GLX visual under the hosted runner's Xvfb. Use Mesa's EGL path instead.
+      SDL_VIDEO_FORCE_EGL: ${{ matrix.mc == '26.3' && '1' || '0' }}
+      SDL_VIDEODRIVER: x11
+      LIBGL_ALWAYS_SOFTWARE: '1'
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -173,6 +178,10 @@ jobs:
     if: inputs.checks != 'build'
     name: Real client rendering (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
+    env:
+      SDL_VIDEO_FORCE_EGL: ${{ matrix.mc == '26.3' && '1' || '0' }}
+      SDL_VIDEODRIVER: x11
+      LIBGL_ALWAYS_SOFTWARE: '1'
     timeout-minutes: 30
     strategy:
       fail-fast: false

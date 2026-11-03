@@ -62,5 +62,7 @@ stonecutter parameters {
         replace("VanillaRegistries.createLookup()", "VanillaRegistries.createReloadableLookup(VanillaRegistries.createWorldLookup())")
         replace("poseStack.mulPose(camera.orientation)", "poseStack.rotate(camera.orientation)")
         replace("scrape ? SoundEvents.AXE_SCRAPE : SoundEvents.AXE_WAX_OFF", "scrape ? SoundEvents.AXE_SCRAPE.value() : SoundEvents.AXE_WAX_OFF.value()")
+        replace("eq(SoundEvents.AXE_SCRAPE)", "eq(SoundEvents.AXE_SCRAPE.value())")
+        replace("eq(SoundEvents.AXE_WAX_OFF)", "eq(SoundEvents.AXE_WAX_OFF.value())")
     }
 }
