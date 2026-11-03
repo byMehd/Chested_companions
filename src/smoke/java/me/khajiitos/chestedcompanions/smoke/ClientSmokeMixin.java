@@ -15,12 +15,22 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+//? if >=26.2 && <26.3 {
+/*import org.spongepowered.asm.mixin.injection.Redirect;
+*///?}
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class ClientSmokeMixin {
     @Unique private int revived$ticks;
     @Unique private boolean revived$finished;
+
+    //? if >=26.2 && <26.3 {
+    /*// 26.2 explicitly shows its initially hidden GLFW window after the renderer is ready.
+    @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwShowWindow(J)V"), remap = false)
+    private void revived$keepWindowHidden(long handle) {
+    }
+    *///?}
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void checkClient(CallbackInfo ci) {

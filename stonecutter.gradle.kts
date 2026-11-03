@@ -58,4 +58,8 @@ stonecutter parameters {
         replace("Items.WAXED_WEATHERED_COPPER_CHEST", "Items.COPPER_CHEST.waxed().weathered()")
         replace("Items.WAXED_OXIDIZED_COPPER_CHEST", "Items.COPPER_CHEST.waxed().oxidized()")
     }
+    replacements.string(current.parsed >= "26.3") {
+        replace("poseStack.mulPose(camera.orientation)", "poseStack.rotate(camera.orientation)")
+        replace("scrape ? SoundEvents.AXE_SCRAPE : SoundEvents.AXE_WAX_OFF", "scrape ? SoundEvents.AXE_SCRAPE.value() : SoundEvents.AXE_WAX_OFF.value()")
+    }
 }
