@@ -1,18 +1,17 @@
 package me.khajiitos.chestedcompanions.common.client.renderer.layer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import me.khajiitos.chestedcompanions.common.ChestedCompanions;
+import me.khajiitos.chestedcompanions.common.client.renderer.ChestBag;
+import me.khajiitos.chestedcompanions.common.client.renderer.PetRenderTypes;
 import me.khajiitos.chestedcompanions.common.util.IChestEntityRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -22,9 +21,8 @@ import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 public abstract class ChestLayer<T extends LivingEntityRenderState, M extends EntityModel<T>> extends RenderLayer<T, M> {
     protected static final float HALF_PI = (float)Math.PI / 2.f;
@@ -44,7 +42,7 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
         };
     }
 
-    private static Identifier getResourceLocation(@Nullable ItemStack chestItem) {
+    private static Identifier getTexture(@Nullable ItemStack chestItem) {
         if (chestItem == null || chestItem.isEmpty()) return BASE_CHEST_LOCATION;
         if (chestItem.is(Items.ENDER_CHEST)) {
             return Identifier.fromNamespaceAndPath("chestedcompanions", "textures/chest/special/ender.png");
@@ -63,8 +61,8 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
         return Minecraft.getInstance().getResourceManager().getResource(texture).isPresent() ? texture : BASE_CHEST_LOCATION;
     }
 
-    private final List<ModelPart.Cube> cubes;
-    private final List<ModelPart.Cube> atlasCubes;
+    private final ChestBag[] bags;
+    private final ChestBag[] atlasBags;
 
     public ChestLayer(RenderLayerParent<T, M> renderLayerParent) {
         super(renderLayerParent);
@@ -72,34 +70,16 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
         Vec3i positionLeftChestCube = this.positionLeftChestCube();
         Vec3i positionRightChestCube = this.positionRightChestCube();
 
-        ModelPart.Cube left = new ModelPart.Cube(
-                0, 0,
-                positionLeftChestCube.getX(), positionLeftChestCube.getY(), positionLeftChestCube.getZ(),
-                8, 8, 3,
-                1.f, 1.f, 1.f,
-                false,
-                22, 11,
-                Set.of(Direction.values())
-        );
-
-        ModelPart.Cube right = new ModelPart.Cube(
-                0, 0,
-                positionRightChestCube.getX(), positionRightChestCube.getY(), positionRightChestCube.getZ(),
-                8, 8, 3,
-                1.f, 1.f, 1.f,
-                true,
-                22, 11,
-                Set.of(Direction.values())
-        );
-
-        this.cubes = List.of(left, right);
-        this.atlasCubes = List.of(
-                // Pale oak MCV retains a 64x64 vanilla-style chest atlas. Select
-                // its body/front area for these small side chests.
-                new ModelPart.Cube(33, 30, positionLeftChestCube.getX(), positionLeftChestCube.getY(), positionLeftChestCube.getZ(),
-                        8, 8, 3, 1.f, 1.f, 1.f, false, 64, 64, Set.of(Direction.values())),
-                new ModelPart.Cube(33, 30, positionRightChestCube.getX(), positionRightChestCube.getY(), positionRightChestCube.getZ(),
-                        8, 8, 3, 1.f, 1.f, 1.f, true, 64, 64, Set.of(Direction.values())));
+        this.bags = new ChestBag[] {
+                new ChestBag(positionLeftChestCube, false, 0, 0, 22, 11),
+                new ChestBag(positionRightChestCube, true, 0, 0, 22, 11)
+        };
+        // Pale oak MCV retains a 64x64 vanilla-style chest atlas. Select its body/front
+        // area for these small side chests.
+        this.atlasBags = new ChestBag[] {
+                new ChestBag(positionLeftChestCube, false, 33, 30, 64, 64),
+                new ChestBag(positionRightChestCube, true, 33, 30, 64, 64)
+        };
     }
 
     protected abstract ModelPart getParentModelBody();
@@ -107,6 +87,19 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
 
     protected abstract Vec3i positionLeftChestCube();
     protected abstract Vec3i positionRightChestCube();
+
+    /** Poses the parent model for this pet, the way the main model is posed. */
+    protected void poseModel(T renderState) {
+        this.getParentModel().setupAnim(renderState);
+    }
+
+    /** Moves the two bags of a chest part apart across the pet by {@code amount} (closer when negative). */
+    protected static void spread(ModelPart chestModelPart, float amount) {
+        chestModelPart.getChild("left_body").z += amount;
+        chestModelPart.getChild("left_lid").z += amount;
+        chestModelPart.getChild("right_body").z -= amount;
+        chestModelPart.getChild("right_lid").z -= amount;
+    }
 
     @Override
     public void submit(@NotNull PoseStack poseStack, @NotNull SubmitNodeCollector collector, int pPackedLight, @NotNull T renderState, float v, float v1) {
@@ -116,14 +109,18 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
 
         if (renderState.isInvisible) return;
         // Rendering is deferred in 1.21.11. Snapshot this pet's transform in its own part.
-        this.getParentModel().setupAnim(renderState);
+        this.poseModel(renderState);
         ItemStack chest = chestEntityRenderState.chestedCompanions$getChestItemStack();
         Identifier item = BuiltInRegistries.ITEM.getKey(chest.getItem());
         boolean atlas = item.getNamespace().equals("lolmcv") && item.getPath().equals("pale_oak_chest");
-        ModelPart part = new ModelPart(atlas ? this.atlasCubes : this.cubes, new HashMap<>());
+        ChestBag[] sides = atlas ? this.atlasBags : this.bags;
+        float angle = ChestBag.lidAngle(chestEntityRenderState.chestedCompanions$getLidOpenness());
+        ModelPart part = new ModelPart(List.of(), Map.of(
+                "left_body", sides[0].createBody(), "left_lid", sides[0].createLid(angle),
+                "right_body", sides[1].createBody(), "right_lid", sides[1].createLid(angle)));
         this.setupPosition(renderState, part);
         collector.submitModelPart(part, poseStack,
-                RenderTypes.entityCutoutNoCull(getResourceLocation(chestEntityRenderState.chestedCompanions$getChestItemStack())),
+                PetRenderTypes.entityCutoutNoCull(getTexture(chestEntityRenderState.chestedCompanions$getChestItemStack())),
                 pPackedLight, LivingEntityRenderer.getOverlayCoords(renderState, 0.f), null);
 
     }

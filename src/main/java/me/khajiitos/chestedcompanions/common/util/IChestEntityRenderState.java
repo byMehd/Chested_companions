@@ -8,6 +8,8 @@ public interface IChestEntityRenderState {
     void chestedCompanions$setChestItemStack(@NotNull ItemStack itemStack);
     boolean chestedCompanions$shouldRenderChestIcon();
     void chestedCompanions$setShouldRenderChestIcon(boolean shouldRenderChestIcon);
+    float chestedCompanions$getLidOpenness();
+    void chestedCompanions$setLidOpenness(float lidOpenness);
 
     default boolean chestedCompanions$hasChest() {
         return !this.chestedCompanions$getChestItemStack().isEmpty();

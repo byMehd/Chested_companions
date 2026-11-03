@@ -1,7 +1,9 @@
 plugins { id 'net.neoforged.moddev' version '2.0.148' }
 apply from: rootProject.file('build-common.gradle')
+// -Pminimum builds against the oldest NeoForge the mod declares, to prove the declared minimum.
+def neoVersion = project.hasProperty('minimum') ? neo_minimum : neo_version
 neoForge {
-    version = neo_version
+    version = neoVersion
     runs {
         client { client(); gameDirectory = rootProject.file('run/neoforge') }
         server { server(); gameDirectory = rootProject.file('run/neoforge-server'); programArgument '--nogui' }
@@ -13,12 +15,12 @@ neoForge {
     }
 }
 dependencies {
-    testImplementation "net.neoforged:testframework:${neo_version}"
+    testImplementation "net.neoforged:testframework:${neoVersion}"
     compileOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
     if (project.hasProperty('withOptionalMods')) {
         runtimeOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
-        runtimeOnly 'maven.modrinth:HKKqmr2p:6UmR3cPp'
-        runtimeOnly 'maven.modrinth:7jzrCiK0:yCBebvg9'
+        runtimeOnly "maven.modrinth:HKKqmr2p:${mcv_neoforge_version}"
+        runtimeOnly "maven.modrinth:7jzrCiK0:${quad_neoforge_version}"
     }
 }
 sourceSets.test.java.srcDir rootProject.file('loaders/neoforge/src/test/java')

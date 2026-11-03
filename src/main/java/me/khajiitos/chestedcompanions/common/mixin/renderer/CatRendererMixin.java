@@ -44,6 +44,7 @@ public abstract class CatRendererMixin extends MobRenderer<Cat, CatRenderState, 
         if (cat instanceof IChestEntity chestEntity && renderState instanceof IChestEntityRenderState chestEntityRenderState) {
             chestEntityRenderState.chestedCompanions$setChestItemStack(chestEntity.chestedCompanions$getChestItemStack());
             chestEntityRenderState.chestedCompanions$setShouldRenderChestIcon(ChestIconRenderer.shouldRender(cat));
+            chestEntityRenderState.chestedCompanions$setLidOpenness(chestEntity.chestedCompanions$getState().lidOpenness(v));
         }
     }
 }

@@ -1,6 +1,7 @@
 package me.khajiitos.chestedcompanions.common.client.renderer.layer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import me.khajiitos.chestedcompanions.common.client.renderer.PetTorso;
 import me.khajiitos.chestedcompanions.common.config.CCConfig;
 import me.khajiitos.chestedcompanions.common.mixin.accessor.CatModelAccessor;
 import net.minecraft.client.model.animal.feline.CatModel;
@@ -9,9 +10,17 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.CatRenderState;
 import net.minecraft.core.Vec3i;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
 
 public class CatChestLayer extends ChestLayer<CatRenderState, CatModel> {
+    private static final float BAG_SCALE = 0.6F;
+    // The vanilla cat: its torso is a 4x16x6 box, and the chest part sits this far from the middle of it.
+    private static final float TORSO_LENGTH = 16.0F;
+    private static final float TORSO_HALF_WIDTH = 2.0F;
+    private static final float CHEST_FROM_TORSO_Y = -3.0F;
+    private static final float CHEST_FROM_TORSO_Z = -11.0F;
+
     public CatChestLayer(RenderLayerParent<CatRenderState, CatModel> renderLayerParent) {
         super(renderLayerParent);
     }
@@ -31,6 +40,22 @@ public class CatChestLayer extends ChestLayer<CatRenderState, CatModel> {
         return new Vec3i(-22, 4, -7);
     }
 
+    /**
+     * Resource packs built on Entity Model Features (Fresh Animations, Fat Cat, Better Cats...) leave the vanilla body
+     * part empty and rebuild the cat below it, so the pose of that part no longer says where the torso is.
+     */
+    private static boolean isRebuilt(ModelPart catBody) {
+        return catBody.hasChild("EMF_body") || catBody.isEmpty();
+    }
+
+    @Override
+    protected void poseModel(CatRenderState renderState) {
+        // Entity Model Features animates a rebuilt cat right before the layers run: posing it again would undo that.
+        if (!isRebuilt(this.getParentModelBody())) {
+            super.poseModel(renderState);
+        }
+    }
+
     @Override
     protected void setupPosition(CatRenderState catRenderState, ModelPart chestModelPart) {
         ModelPart catBody = this.getParentModelBody();
@@ -38,6 +63,21 @@ public class CatChestLayer extends ChestLayer<CatRenderState, CatModel> {
         chestModelPart.xRot = HALF_PI;
         chestModelPart.yRot = HALF_PI;
         chestModelPart.zRot = HALF_PI;
+
+        PetTorso torso = isRebuilt(catBody) ? PetTorso.find(catBody) : null;
+        if (torso != null) {
+            // Keep the vanilla layout, but measured from the real torso: a baby, a fat or a rebuilt cat follows.
+            float size = Mth.clamp(torso.length() / TORSO_LENGTH, 0.25F, 4.0F);
+            chestModelPart.x = torso.x();
+            chestModelPart.y = torso.y() + CHEST_FROM_TORSO_Y * size;
+            chestModelPart.z = torso.z() + CHEST_FROM_TORSO_Z * size;
+            chestModelPart.xScale = BAG_SCALE * size;
+            chestModelPart.yScale = BAG_SCALE * size;
+            chestModelPart.zScale = BAG_SCALE * size;
+            // A torso wider than the vanilla one would swallow the bags: hang them on its flanks.
+            spread(chestModelPart, Math.max(0.0F, torso.halfWidth() - TORSO_HALF_WIDTH * size) / (BAG_SCALE * size));
+            return;
+        }
 
         if (catRenderState.isBaby) {
             chestModelPart.x = catBody.x;
@@ -50,9 +90,9 @@ public class CatChestLayer extends ChestLayer<CatRenderState, CatModel> {
             chestModelPart.x = catBody.x;
             chestModelPart.y = catBody.y + 2.f;
             chestModelPart.z = catBody.z;
-            chestModelPart.xScale = 0.6f;
-            chestModelPart.yScale = 0.6f;
-            chestModelPart.zScale = 0.6f;
+            chestModelPart.xScale = BAG_SCALE;
+            chestModelPart.yScale = BAG_SCALE;
+            chestModelPart.zScale = BAG_SCALE;
         }
 
         // This is the rotation of the body when sitting.
@@ -61,13 +101,6 @@ public class CatChestLayer extends ChestLayer<CatRenderState, CatModel> {
         if (catBody.xRot == HALF_PI / 2) {
             chestModelPart.y += catRenderState.isBaby ? 4.0f : 6.0f;
             chestModelPart.z -= catRenderState.isBaby ? 3.0f : 6.0f;
-        }
-
-        // Likely Fresh Animations, adjust positions for it
-        // funnily enough, this isn't required for wolves
-        if (catBody.hasChild("EMF_body")) {
-            chestModelPart.z -= 10.0f;
-            chestModelPart.y -= 4.0f;
         }
     }
 

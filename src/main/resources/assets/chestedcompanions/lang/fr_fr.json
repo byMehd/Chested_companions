@@ -1,0 +1,55 @@
+{
+  "chestedcompanions.config.header": "Configuration de Chested Companions",
+  "chestedcompanions.config.category.general": "Général",
+
+  "chestedcompanions.config.allowChestOnCats.name": "Autoriser les coffres sur les chats",
+  "chestedcompanions.config.allowChestOnCats.description": "Si activé, on peut équiper les chats d'un coffre",
+
+  "chestedcompanions.config.allowChestOnWolves.name": "Autoriser les coffres sur les loups",
+  "chestedcompanions.config.allowChestOnWolves.description": "Si activé, on peut équiper les loups d'un coffre",
+
+  "chestedcompanions.config.invertShiftToOpen.name": "Inverser Maj pour ouvrir",
+  "chestedcompanions.config.invertShiftToOpen.description": "Si activé, un clic normal ordonne à l'animal de s'asseoir et un clic avec Maj ouvre le coffre",
+
+  "chestedcompanions.config.publicChest.name": "Coffre public",
+  "chestedcompanions.config.publicChest.description": "Tout le monde peut accéder au coffre de l'animal, l'équiper ou le retirer, pas seulement son propriétaire",
+
+  "chestedcompanions.config.catInventoryCapacity.name": "Capacité du coffre du chat",
+  "chestedcompanions.config.catInventoryCapacity.description": "Définit le nombre d'emplacements du coffre du chat",
+  "chestedcompanions.config.catInventoryCapacity.value.one_row": "Une rangée (9)",
+  "chestedcompanions.config.catInventoryCapacity.value.two_rows": "Deux rangées (18)",
+  "chestedcompanions.config.catInventoryCapacity.value.three_rows": "Trois rangées (27)",
+
+  "chestedcompanions.config.wolfInventoryCapacity.name": "Capacité du coffre du loup",
+  "chestedcompanions.config.wolfInventoryCapacity.description": "Définit le nombre d'emplacements du coffre du loup",
+  "chestedcompanions.config.wolfInventoryCapacity.value.one_row": "Une rangée (9)",
+  "chestedcompanions.config.wolfInventoryCapacity.value.two_rows": "Deux rangées (18)",
+  "chestedcompanions.config.wolfInventoryCapacity.value.three_rows": "Trois rangées (27)",
+
+  "chestedcompanions.config.hideCatChest.name": "Masquer le coffre du chat",
+  "chestedcompanions.config.hideCatChest.description": "Masque le coffre des chats en cas d'incompatibilité",
+
+  "chestedcompanions.config.hideWolfChest.name": "Masquer le coffre du loup",
+  "chestedcompanions.config.hideWolfChest.description": "Masque le coffre des loups en cas d'incompatibilité",
+
+  "chestedcompanions.config.allowChestOnBabyCat.name": "Autoriser les coffres sur les chatons",
+  "chestedcompanions.config.allowChestOnBabyCat.description": "Les chatons peuvent porter un coffre",
+
+  "chestedcompanions.config.allowChestOnBabyWolf.name": "Autoriser les coffres sur les louveteaux",
+  "chestedcompanions.config.allowChestOnBabyWolf.description": "Les louveteaux peuvent porter un coffre",
+
+  "chestedcompanions.config.showChestIconOnCats.name": "Afficher l'icône de coffre sur les chats",
+  "chestedcompanions.config.showChestIconOnCats.description": "Affiche une icône de coffre au-dessus du chat, utile si le modèle du coffre ne peut pas être affiché",
+
+  "chestedcompanions.config.showChestIconOnWolves.name": "Afficher l'icône de coffre sur les loups",
+  "chestedcompanions.config.showChestIconOnWolves.description": "Affiche une icône de coffre au-dessus du loup, utile si le modèle du coffre ne peut pas être affiché",
+
+  "chestedcompanions.config.feedingOverridesOpeningChest.name": "Nourrir prime sur l'ouverture du coffre",
+  "chestedcompanions.config.feedingOverridesOpeningChest.description": "Nourrir l'animal est prioritaire sur l'ouverture du coffre",
+
+  "chestedcompanions.config.copperGolemsUsePetChests.name": "Les golems de cuivre utilisent les coffres des animaux",
+  "chestedcompanions.config.copperGolemsUsePetChests.description": "Les golems de cuivre prennent des objets dans le coffre en cuivre d'un animal proche, comme dans un coffre en cuivre posé",
+
+  "container.chestedcompanions.pet_chest": "%s - %s",
+  "gui.chestedcompanions.remove_chest": "Retirer le coffre\nLe coffre et tout son contenu tombent au sol"
+}

@@ -45,5 +45,11 @@
   "chestedcompanions.config.showChestIconOnWolves.description": "Renders a chest icon above the wolf, can be used if the chest model can't be displayed",
 
   "chestedcompanions.config.feedingOverridesOpeningChest.name": "Feeding Overrides Opening Chest",
-  "chestedcompanions.config.feedingOverridesOpeningChest.description": "Feeding the pet has higher priority than opening the chest"
+  "chestedcompanions.config.feedingOverridesOpeningChest.description": "Feeding the pet has higher priority than opening the chest",
+
+  "chestedcompanions.config.copperGolemsUsePetChests.name": "Copper Golems Use Pet Chests",
+  "chestedcompanions.config.copperGolemsUsePetChests.description": "Copper golems take items from the copper chest a nearby pet wears, as they do from a placed copper chest",
+
+  "container.chestedcompanions.pet_chest": "%s - %s",
+  "gui.chestedcompanions.remove_chest": "Remove chest\nThe chest and everything in it drop to the ground"
 }

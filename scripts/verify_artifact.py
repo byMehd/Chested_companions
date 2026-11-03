@@ -6,7 +6,8 @@ import sys
 import zipfile
 
 loader = sys.argv[1]
-directory = Path(f'versions/1.21.11-{loader}/build/libs')
+minecraft = sys.argv[2] if len(sys.argv) > 2 else '1.21.11'
+directory = Path(f'versions/{minecraft}-{loader}/build/libs')
 jars = [p for p in directory.glob('*.jar') if not any(x in p.stem for x in ('sources', '-dev', '-plain'))]
 assert len(jars) == 1, f'Expected one installable JAR, found {jars}'
 with zipfile.ZipFile(jars[0]) as jar:
@@ -14,6 +15,12 @@ with zipfile.ZipFile(jars[0]) as jar:
     assert 'LICENSE' in names and 'NOTICE.md' in names
     assert not any('/smoke/' in name or 'revived-smoke' in name for name in names), 'Development tests leaked into release'
     assert 'chestedcompanions.mixins.json' in names
+    mixins = json.loads(jar.read('chestedcompanions.mixins.json'))
+    for mixin in ('entity.TamableAnimalMixin', 'entity.LivingEntityMixin', 'golem.CopperGolemAiMixin', 'golem.CopperGolemMixin', 'golem.TransportItemsBetweenContainersMixin'):
+        assert mixin in mixins['mixins'], f'Missing mixin: {mixin}'
+    assert 'gui.AbstractContainerScreenMixin' in mixins['client'], 'Missing client mixin: gui.AbstractContainerScreenMixin'
+    for language in ('en_us', 'fr_fr', 'pl_pl'):
+        assert f'assets/chestedcompanions/lang/{language}.json' in names, f'Missing translation: {language}'
     metadata = {'fabric': 'fabric.mod.json', 'neoforge': 'META-INF/neoforge.mods.toml', 'forge': 'META-INF/mods.toml'}[loader]
     assert metadata in names
     if loader == 'fabric':
@@ -21,8 +28,13 @@ with zipfile.ZipFile(jars[0]) as jar:
         assert mod['id'] == 'chestedcompanions_revived'
         assert mod['name'] == 'Chested Companions: Revived'
         assert 'fabric-api' not in mod['depends'], 'Core mod must work without Fabric API'
-        assert any(name.startswith('META-INF/jars/fabric-resource-loader-v1-') for name in names), 'Standalone resource loader must be bundled'
-        assert any(name.startswith('META-INF/jars/fabric-api-base-') for name in names), 'The resource loader base dependency must also be bundled'
+        assert mod['depends']['minecraft'] == minecraft, f"Built for {mod['depends']['minecraft']}, not {minecraft}"
+        # The modules that load the mod's resources are bundled and declared, and which ones they are depends on the Minecraft version.
+        bundled = [module for module in mod['depends'] if module.startswith('fabric-') and module != 'fabric-api']
+        assert 'fabric-resource-loader-v1' in bundled, 'Standalone resource loader must be bundled'
+        for module in bundled:
+            assert any(name.startswith(f'META-INF/jars/{module}-') for name in names), f'{module} is declared but not bundled'
+        assert (minecraft == '1.21.11') == ('fabric-resource-loader-v0' not in bundled), 'The old resource loader module is bundled up to 1.21.10 only'
     tag = json.loads(jar.read('data/chestedcompanions/tags/item/pet_chest_item.json'))
     assert 'minecraft:ender_chest' in tag['values']
     copper_variants = {

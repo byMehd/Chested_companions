@@ -58,6 +58,9 @@ public class CCConfig {
     @Entry
     public static final CCConfigValues.BooleanValue feedingOverridesOpeningChest = new CCConfigValues.BooleanValue(true);
 
+    @Entry
+    public static final CCConfigValues.BooleanValue copperGolemsUsePetChests = new CCConfigValues.BooleanValue(true);
+
     public static void init() {
         init(java.nio.file.Path.of("config"));
     }

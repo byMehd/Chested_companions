@@ -44,6 +44,7 @@ public abstract class WolfRendererMixin extends MobRenderer<Wolf, WolfRenderStat
         if (wolf instanceof IChestEntity chestEntity && renderState instanceof IChestEntityRenderState chestEntityRenderState) {
             chestEntityRenderState.chestedCompanions$setChestItemStack(chestEntity.chestedCompanions$getChestItemStack());
             chestEntityRenderState.chestedCompanions$setShouldRenderChestIcon(ChestIconRenderer.shouldRender(wolf));
+            chestEntityRenderState.chestedCompanions$setLidOpenness(chestEntity.chestedCompanions$getState().lidOpenness(v));
         }
     }
 }

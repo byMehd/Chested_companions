@@ -11,13 +11,13 @@ description="An independent continuation of Chested Companions. Equip chests on 
 [[dependencies.chestedcompanions_revived]]
 modId="neoforge"
 type="required"
-versionRange="[21.11.0-beta,21.12)"
+versionRange="${neo_range}"
 ordering="NONE"
 side="BOTH"
 [[dependencies.chestedcompanions_revived]]
 modId="minecraft"
 type="required"
-versionRange="[1.21.11,1.21.12)"
+versionRange="${minecraft_range}"
 ordering="NONE"
 side="BOTH"
 [[mixins]]

@@ -15,6 +15,9 @@ public class CatRenderStateMixin implements IChestEntityRenderState {
     @Unique
     private boolean chestedcompanions$shouldRenderChestIcon = false;
 
+    @Unique
+    private float chestedcompanions$lidOpenness = 0.0F;
+
     @Override
     public ItemStack chestedCompanions$getChestItemStack() {
         return chestedcompanions$chestItemStack;
@@ -33,5 +36,15 @@ public class CatRenderStateMixin implements IChestEntityRenderState {
     @Override
     public void chestedCompanions$setShouldRenderChestIcon(boolean shouldRenderChestIcon) {
         this.chestedcompanions$shouldRenderChestIcon = shouldRenderChestIcon;
+    }
+
+    @Override
+    public float chestedCompanions$getLidOpenness() {
+        return this.chestedcompanions$lidOpenness;
+    }
+
+    @Override
+    public void chestedCompanions$setLidOpenness(float lidOpenness) {
+        this.chestedcompanions$lidOpenness = lidOpenness;
     }
 }
