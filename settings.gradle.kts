@@ -12,8 +12,10 @@ plugins { id("dev.kikugie.stonecutter") version "0.9.8" }
 rootProject.name = "ChestedCompanionsRevived"
 stonecutter {
     create(rootProject) {
-        for (loader in listOf("fabric", "neoforge", "forge")) {
-            version("1.21.11-$loader", "1.21.11").buildscript("build.$loader.gradle")
+        for (minecraft in listOf("1.21.11", "1.21.10", "1.21.9")) {
+            for (loader in listOf("fabric", "neoforge", "forge")) {
+                version("$minecraft-$loader", minecraft).buildscript("build.$loader.gradle")
+            }
         }
         vcsVersion = "1.21.11-fabric"
     }

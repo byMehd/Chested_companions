@@ -49,7 +49,7 @@ public class ChestIconRenderer {
         poseStack.scale(-SCALE, -SCALE, SCALE);
         int overlay = LivingEntityRenderer.getOverlayCoords(state, 0.f);
         int light = state.lightCoords;
-        collector.submitCustomGeometry(poseStack, net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(CHEST_ICON_LOCATION), (pose, vertices) -> {
+        collector.submitCustomGeometry(poseStack, PetRenderTypes.entityCutout(CHEST_ICON_LOCATION), (pose, vertices) -> {
             Matrix4f matrix = pose.pose();
             vertices.addVertex(matrix, 0, 0, 0).setColor(-1).setUv(0, 0).setOverlay(overlay).setLight(light).setNormal(0, 0, 1);
             vertices.addVertex(matrix, 0, 16, 0).setColor(-1).setUv(0, 1).setOverlay(overlay).setLight(light).setNormal(0, 0, 1);

@@ -2,12 +2,12 @@ package me.khajiitos.chestedcompanions.common.client.renderer.layer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import me.khajiitos.chestedcompanions.common.client.renderer.ChestBag;
+import me.khajiitos.chestedcompanions.common.client.renderer.PetRenderTypes;
 import me.khajiitos.chestedcompanions.common.util.IChestEntityRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
@@ -42,7 +42,7 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
         };
     }
 
-    private static Identifier getResourceLocation(@Nullable ItemStack chestItem) {
+    private static Identifier getTexture(@Nullable ItemStack chestItem) {
         if (chestItem == null || chestItem.isEmpty()) return BASE_CHEST_LOCATION;
         if (chestItem.is(Items.ENDER_CHEST)) {
             return Identifier.fromNamespaceAndPath("chestedcompanions", "textures/chest/special/ender.png");
@@ -120,7 +120,7 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
                 "right_body", sides[1].createBody(), "right_lid", sides[1].createLid(angle)));
         this.setupPosition(renderState, part);
         collector.submitModelPart(part, poseStack,
-                RenderTypes.entityCutoutNoCull(getResourceLocation(chestEntityRenderState.chestedCompanions$getChestItemStack())),
+                PetRenderTypes.entityCutoutNoCull(getTexture(chestEntityRenderState.chestedCompanions$getChestItemStack())),
                 pPackedLight, LivingEntityRenderer.getOverlayCoords(renderState, 0.f), null);
 
     }

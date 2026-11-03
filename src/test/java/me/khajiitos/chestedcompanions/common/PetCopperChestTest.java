@@ -91,7 +91,11 @@ class PetCopperChestTest {
         PetFixture fixture = new PetFixture(new ItemStack(Items.EXPOSED_COPPER_CHEST), 9);
         fixture.chest.get().set(DataComponents.CUSTOM_NAME, Component.literal("My chest"));
         GameRules rules = mock(GameRules.class);
+        //? if >=1.21.11 {
         when(rules.get(GameRules.RANDOM_TICK_SPEED)).thenReturn(3);
+        //?} else {
+        /*when(rules.getInt(GameRules.RULE_RANDOMTICKING)).thenReturn(3);
+        *///?}
         when(fixture.level.getGameRules()).thenReturn(rules);
         RandomSource lucky = mock(RandomSource.class);
         when(lucky.nextFloat()).thenReturn(0.0F);

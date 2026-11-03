@@ -38,7 +38,11 @@ public class ClientSmokeMixin {
         }
         var config = me.khajiitos.chestedcompanions.common.client.config.ConfigScreens.create(client.screen);
         if (config == null) throw new AssertionError("Configuration screen unavailable");
+        //? if >=1.21.11 {
         config.init(client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+        //?} else {
+        /*config.init(client, client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+        *///?}
         var paleOak = net.minecraft.resources.Identifier.fromNamespaceAndPath("lolmcv", "pale_oak_chest");
         if (net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(paleOak)) {
             var texture = net.minecraft.resources.Identifier.fromNamespaceAndPath("lolmcv", "textures/entity/chest/pale_oak.png");

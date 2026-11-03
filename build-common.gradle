@@ -32,7 +32,8 @@ tasks.withType(Test).configureEach {
     }
 }
 processResources {
-    def props = [version: project.version, minecraft_version: minecraft_version]
+    def props = [version: project.version, minecraft_version: minecraft_version,
+                 minecraft_range: minecraft_range, neo_range: neo_range, forge_range: forge_range, forge_loader: forge_loader]
     inputs.properties props
     filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml', 'META-INF/mods.toml']) { expand props }
 }

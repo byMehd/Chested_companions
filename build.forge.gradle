@@ -13,9 +13,11 @@ minecraft {
     }
 }
 repositories { minecraft.mavenizer(it); maven fg.forgeMaven; maven fg.minecraftLibsMaven }
+// -Pminimum builds against the oldest Forge the mod declares, to prove the declared minimum.
+def forgeVersion = project.hasProperty('minimum') ? forge_minimum : forge_version
 dependencies {
-    implementation minecraft.dependency("net.minecraftforge:forge:${minecraft_version}-${forge_version}")
-    // Cloth no longer publishes Forge builds for 1.21.11. Compile its shared API only;
+    implementation minecraft.dependency("net.minecraftforge:forge:${minecraft_version}-${forgeVersion}")
+    // Cloth no longer publishes Forge builds. Compile its shared API only;
     // the native settings screen remains available without installing Cloth.
     compileOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
 }

@@ -255,8 +255,16 @@ public final class ServerSmokeScenario {
 
     // ---------------------------------------------------------------- aging
 
+    private void setRandomTickSpeed(int speed) {
+        //? if >=1.21.11 {
+        this.level.getGameRules().set(GameRules.RANDOM_TICK_SPEED, speed, this.server);
+        //?} else {
+        /*this.level.getGameRules().getRule(GameRules.RULE_RANDOMTICKING).set(speed, this.server);
+        *///?}
+    }
+
     private void startAgingScenario() {
-        this.level.getGameRules().set(GameRules.RANDOM_TICK_SPEED, 3000, this.server);
+        this.setRandomTickSpeed(3000);
         this.agingPet = this.spawnPet(this.base.offset(0, 0, 5), new ItemStack(Items.COPPER_CHEST));
         this.waxedPet = this.spawnPet(this.base.offset(0, 0, -5), new ItemStack(Items.WAXED_COPPER_CHEST));
         inventory(this.agingPet).setItem(0, new ItemStack(Items.EMERALD, 3));
@@ -275,7 +283,7 @@ public final class ServerSmokeScenario {
             check(inventory(this.agingPet).getItem(0).getCount() == 3 && inventory(this.agingPet).getItem(0).is(Items.EMERALD),
                     "oxidation changed the chest contents");
             System.out.println("REVIVED_SERVER_SMOKE: aging scenario passed after " + this.stageTick + " ticks");
-            this.level.getGameRules().set(GameRules.RANDOM_TICK_SPEED, 3, this.server);
+            this.setRandomTickSpeed(3);
             this.agingPet.discard();
             this.waxedPet.discard();
             this.next(Stage.DROPS);

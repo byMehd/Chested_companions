@@ -11,6 +11,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -34,7 +35,8 @@ public final class PetRemoveChestButton extends AbstractButton {
     private final ItemStack icon = new ItemStack(Items.CHEST);
 
     private PetRemoveChestButton(int x, int y, Runnable action) {
-        super(x, y, SIZE, SIZE, LABEL);
+        // Without a message the vanilla button draws no text; the label is only narrated and shown as the tooltip.
+        super(x, y, SIZE, SIZE, Component.empty());
         this.action = action;
         this.setTooltip(Tooltip.create(LABEL));
     }
@@ -45,15 +47,28 @@ public final class PetRemoveChestButton extends AbstractButton {
     }
 
     @Override
+    public MutableComponent createNarrationMessage() {
+        return wrapDefaultNarrationMessage(LABEL);
+    }
+
+    @Override
     protected void updateWidgetNarration(NarrationElementOutput output) {
         this.defaultButtonNarrationText(output);
     }
 
+    //? if >=1.21.11 {
     @Override
     protected void renderContents(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderDefaultSprite(graphics);
         this.renderIcon(graphics, this.getX(), this.getY());
     }
+    //?} else {
+    /*@Override
+    protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        this.renderIcon(graphics, this.getX(), this.getY());
+    }
+    *///?}
 
     /** The chest with a thin red cross over it, both inside the 16x16 an item takes. */
     private void renderIcon(GuiGraphics graphics, int left, int top) {

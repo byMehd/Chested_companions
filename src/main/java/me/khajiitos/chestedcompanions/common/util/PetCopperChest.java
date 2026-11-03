@@ -82,9 +82,18 @@ public final class PetCopperChest {
         return randomTickSpeed / BLOCKS_PER_SECTION * AGING_CHANCE_PER_RANDOM_TICK * weathering.getChanceModifier();
     }
 
+    /** The world's random tick speed: what makes a placed copper chest age, and so a worn one. */
+    public static int randomTickSpeed(ServerLevel level) {
+        //? if >=1.21.11 {
+        return level.getGameRules().get(GameRules.RANDOM_TICK_SPEED);
+        //?} else {
+        /*return level.getGameRules().getInt(GameRules.RULE_RANDOMTICKING);
+        *///?}
+    }
+
     public static <T extends TamableAnimal & IChestEntity> void tickAging(T pet, ServerLevel level) {
         ItemStack chest = pet.chestedCompanions$getChestItemStack();
-        float chance = agingChancePerTick(level.getGameRules().get(GameRules.RANDOM_TICK_SPEED), chest);
+        float chance = agingChancePerTick(randomTickSpeed(level), chest);
         if (chance > 0.0F && level.getRandom().nextFloat() < chance) {
             next(chest).ifPresent(item -> replace(pet, chest, item));
         }
