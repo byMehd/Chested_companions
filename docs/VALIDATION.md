@@ -1,6 +1,10 @@
 # Validation
 
-Local verification completed on 3 November 2026. CI builds, tests and plays every Minecraft version on every loader for each pull request, and provides per-run test reports and installable artifacts.
+The sections below record the 1.21 baseline and the Minecraft 26 ports separately. CI builds all three loaders, runs Fabric client and server scenarios, and provides per-run test reports and installable artifacts. Real NeoForge and Forge client rendering is not covered.
+
+## Minecraft 1.21 baseline
+
+Local verification completed on 3 November 2026.
 
 - Minecraft targets: 1.21.11, 1.21.10 and 1.21.9, built from one shared source. Each build declares exactly one of them.
 - Java bytecode target: 21. Gradle/Forge build tooling: Java 25.
@@ -61,3 +65,28 @@ Fat Cat 1.0 is refused by Minecraft 1.21.11 as published: its `pack.mcmeta` lack
 Client startup checks do not substitute for a complete in-world multiplayer test. The persistence integration tests use a registry-only ephemeral server with detached entities, so they do not change world chunks or test chunk generation.
 
 Not verified: real clients on NeoForge and Forge (the button and model-placement code is shared source, but only a Fabric client was played), third-party model packs and shader mods on 1.21.10 and 1.21.9 (only checked on 1.21.11), OptiFine (Forge only), kittens under Fat Cat, wolves under rebuilt-model packs other than Fresh Animations, the unavailable Cat Loaf and MiniMePets binaries, and Eternal Pets snapshot restoration.
+
+
+## Minecraft 26 ports
+
+The 26.1.2, 26.2 and 26.3 variants use Java 25 and remain mod version **1.0.0**. They use the same Stonecutter source as the 1.21 variants. The separate 1.0.1 lid z-fighting and Fat Cat work is excluded; those known visual issues are not acceptance criteria for these ports.
+
+| Minecraft | Fabric (pinned / minimum) | NeoForge (pinned / minimum) | Forge (pinned / minimum) |
+| --- | --- | --- | --- |
+| 26.1.2 | 0.20.1 / 0.18.4 | 26.1.2.126 / 26.1.2.0-beta | 64.1.6 / 64.0.0 |
+| 26.2 | 0.20.1 / 0.18.4 | 26.2.0.93 / 26.2.0.0-beta | 65.1.6 / 65.0.0 |
+| 26.3 | 0.20.1 / 0.19.3 | 26.3.0.101 / 26.3.0.0-beta | 66.1.5 / 66.0.0 |
+
+### Port-specific coverage
+
+- 26.1.2: all three loaders, minimum and pinned versions, hidden clients, dedicated-server scenarios and client rendering passed in [CI run 41673426188](https://github.com/byMehd/Chested_companions/actions/runs/41673426188).
+- 26.2: Fabric and NeoForge builds and unit tests passed in [CI run 41704984693](https://github.com/byMehd/Chested_companions/actions/runs/41704984693); both Forge builds and the real Forge GameTest server passed in [CI run 41705746263](https://github.com/byMehd/Chested_companions/actions/runs/41705746263). All three hidden client profiles, dedicated-server scenarios and all 61 real-client screenshots passed in [CI run 41706200795](https://github.com/byMehd/Chested_companions/actions/runs/41706200795).
+- 26.3: all three loaders passed on both pinned and minimum versions, with 65 Fabric / Forge unit tests and 69 NeoForge tests; the pinned Forge GameTest server also passed in [CI run 41708926890](https://github.com/byMehd/Chested_companions/actions/runs/41708926890). All three hidden clients and all 61 real-client screenshots passed in [CI run 41708737402](https://github.com/byMehd/Chested_companions/actions/runs/41708737402). Dedicated-server scenarios passed in [CI run 41707899146](https://github.com/byMehd/Chested_companions/actions/runs/41707899146).
+
+The 26.2 test harness follows the moved GUI and Fabric client test context. Its smoke client suppresses the game's explicit `glfwShowWindow` call. The 26.3 harness uses SDL's hidden-window flag at creation and checks it at startup. Linux graphics jobs install Mesa's EGL runtime for SDL; the release mod contains none of this smoke code.
+
+26.3 unit tests initialize both world and reloadable registries for item components. The NeoForge copper tests load actual server resources because copper transitions now use its data maps. Standalone copper unit fixtures bind the vanilla axe tag to their real item holder because the `AxeItem` class no longer exists and those fixtures do not load datapacks.
+
+More Chest Variants and Quad have no published 26.3 build at the time of this port. Their integration tags and textures remain packaged; 26.3 optional checks load Fabric API, Cloth Config and Mod Menu where applicable, without an incompatible older MCV binary. Compatibility on 26.3 cannot be confirmed until those mods publish a matching version. The 26.2 optional Fabric and NeoForge checks include MCV and Quad.
+
+No new Forge or NeoForge graphical client coverage is claimed. Third-party animation, shader and model packs were not revalidated for Minecraft 26. The public JARs are CI artifacts only; this work does not publish to CurseForge.

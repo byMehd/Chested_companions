@@ -1,6 +1,6 @@
 name: Build and tests
 
-# Every supported Minecraft version is built and played on every loader. A push to a branch with an open pull request is
+# Every supported Minecraft version is built on every loader; Fabric runs the client and server scenarios. A push to a branch with an open pull request is
 # tested through the pull request only, so it is not tested twice.
 on:
   push:
@@ -129,7 +129,9 @@ jobs:
           if [[ '${{ matrix.profile }}' == optional ]]; then optional+=(-PwithOptionalMods); fi
           loader=$(sed -n 's/^fabric_loader_version=//p' gradle.properties)
           if [[ '${{ matrix.profile }}' == minimum ]]; then
-            loader=$(sed -n 's/^fabric_loader_minimum=//p' versions/${{ matrix.mc }}-fabric/gradle.properties)
+            variant=versions/${{ matrix.mc }}-fabric/gradle.properties
+            loader=
+            if [[ -f "$variant" ]]; then loader=$(sed -n 's/^fabric_loader_minimum=//p' "$variant"); fi
             if [[ -z "$loader" ]]; then loader=$(sed -n 's/^fabric_loader_minimum=//p' gradle.properties); fi
           fi
           set -o pipefail

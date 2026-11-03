@@ -1,6 +1,6 @@
 # Chested Companions: Revived
 
-Independent continuation of **Chested Companions** by [Khajiitos](https://github.com/Khajiitos/ChestedCompanions), targeting **Minecraft 1.21.11, 1.21.10 and 1.21.9** on **Fabric, NeoForge and Forge**. Built with **Stonecutter 0.9.8** from one shared Java source for every version and loader.
+Independent continuation of **Chested Companions** by [Khajiitos](https://github.com/Khajiitos/ChestedCompanions), targeting **Minecraft 1.21.9, 1.21.10, 1.21.11, 26.1.2, 26.2 and 26.3** on **Fabric, NeoForge and Forge**. Built with **Stonecutter 0.9.8** from one shared Java source for every version and loader.
 
 Original code, artwork and translations are distributed under the original [MIT license](LICENSE). See [NOTICE.md](NOTICE.md) for attribution. This project is not an official update by Khajiitos.
 
@@ -24,19 +24,24 @@ The mod is required on both client and server. Install exactly one JAR matching 
 
 ## Dependencies
 
-| Platform | Minecraft 1.21.11 | Minecraft 1.21.10 | Minecraft 1.21.9 | Required extra API |
+| Minecraft | Game Java | Fabric Loader | NeoForge | Forge |
 | --- | --- | --- | --- | --- |
-| Fabric | Loader 0.17.3 and newer | Loader 0.17.3 and newer | Loader 0.17.3 and newer | **No separate API download**; the small resource-loader modules are bundled (one on 1.21.11, two before it) |
-| NeoForge | 21.11 family, including beta builds | 21.10 family, including beta builds | 21.9 family, beta builds | None |
-| Forge | 61.0.1 through 61.x | 60.0.0 through 60.x | 59.0.0 through 59.x | None |
+| 1.21.11 | 21 | 0.17.3+ | 21.11.0-beta through 21.11.x | 61.0.1 through 61.x |
+| 1.21.10 | 21 | 0.17.3+ | 21.10.0-beta through 21.10.x | 60.0.0 through 60.x |
+| 1.21.9 | 21 | 0.17.3+ | 21.9.0-beta through 21.9.x | 59.0.0 through 59.x |
+| 26.1.2 | 25 | 0.18.4+ | 26.1.2.0-beta through 26.1.2.x | 64.0.0 through 64.x |
+| 26.2 | 25 | 0.18.4+ | 26.2.0.0-beta through 26.2.x | 65.0.0 through 65.x |
+| 26.3 | 25 | 0.19.3+ | 26.3.0.0-beta through 26.3.x | 66.0.0 through 66.x |
+
+Fabric bundles its required resource-loading API modules. NeoForge and Forge need no additional API. All versions remain **mod version 1.0.0**; this port does not include the separate 1.0.1 lid or Fat Cat changes.
 
 Builds use the pinned versions of `gradle.properties` (Minecraft 1.21.11) and `versions/<minecraft>-<loader>/gradle.properties` (the others). The CI also checks the oldest declared versions. A range is not a guarantee about future loader releases; actual verification results are tracked in [docs/VALIDATION.md](docs/VALIDATION.md).
 
-Cloth Config and Mod Menu are optional. A native settings screen is available if Cloth Config is absent; Fabric exposes it through Mod Menu. Their own dependencies apply if you install them. More Chest Variants provides builds for Fabric and NeoForge (its NeoForge build for 1.21.9 and 1.21.10 needs NeoForge 21.10.63 or newer, so it does not load on NeoForge 1.21.9); its original integration stays optional on Forge too. Cat Loaf has no published build for any of them at the time of this port.
+Cloth Config and Mod Menu are optional. A native settings screen is available if Cloth Config is absent; Fabric exposes it through Mod Menu. Their own dependencies apply if you install them. More Chest Variants provides builds for Fabric and NeoForge (its NeoForge build for 1.21.9 and 1.21.10 needs NeoForge 21.10.63 or newer, so it does not load on NeoForge 1.21.9); its original integration stays optional on Forge too. More Chest Variants and Quad have no published 26.3 build at the time of this port: their tags and textures remain supported, but the optional test runtime does not load an older incompatible binary. Cat Loaf has no published build for these game versions at the time of this port.
 
 ## Build and test
 
-Use Java **25 for Gradle/build tools** and Java **21 for the Minecraft target and tests**. Both JDKs must be available to Gradle. The wrapper downloads Gradle 9.8.2.
+Use Java **25 for Gradle/build tools**. Minecraft 1.21 targets and tests use **Java 21**; Minecraft 26 targets and tests use **Java 25**. Both JDKs must be available to Gradle. The wrapper downloads Gradle 9.8.2.
 
 ```powershell
 .\build.ps1
@@ -49,9 +54,11 @@ Every task name starts with the variant it runs on, `<minecraft>-<loader>`; with
 
 On Linux/macOS, use `./gradlew` with the same task names. `JAVA_HOME` should point to JDK 25; let Gradle detect JDK 21 or pass `-Porg.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64`.
 
-JARs are written to `versions/<minecraft>-<loader>/build/libs/`. Files ending in `-sources.jar` are source archives, not installable mods. GitHub Actions builds, tests and plays every version on every loader for each pull request, and uploads the JARs and test reports.
+For a targeted remote check, dispatch **Build and tests** on GitHub with the Minecraft version, validation stage (`build`, `game` or `all`) and loader. Pushes and pull requests keep the complete matrix. The workflow only builds JARs and uploads artifacts; it does not publish to CurseForge.
 
-The smoke-test mod lives in a separate `smoke` source set and is excluded from release JARs. Its GLFW window is hidden before creation. Linux CI runs it under Xvfb. `runSmokeServer` starts a real dedicated server on a throw-away flat world and plays whole scenarios on it: a copper golem emptying a cat's copper chest into a placed chest, copper chest oxidation and waxing, and chest removal and death drops, failing on the first duplicated or lost item.
+JARs are written to `versions/<minecraft>-<loader>/build/libs/`. Files ending in `-sources.jar` are source archives, not installable mods. For each pull request, GitHub Actions builds and unit tests every loader, plays Fabric client and server scenarios, starts the Forge GameTest server, and uploads the JARs and reports.
+
+The smoke-test mod lives in a separate `smoke` source set and is excluded from release JARs. Its window is hidden before creation, through GLFW up to 26.2 and SDL in 26.3. Linux CI runs it under Xvfb. `runSmokeServer` starts a real dedicated server on a throw-away flat world and plays whole scenarios on it: a copper golem emptying a cat's copper chest into a placed chest, copper chest oxidation and waxing, and chest removal and death drops, failing on the first duplicated or lost item.
 
 `runSmokeScreens` does the same on a real client: it saves screenshots of every chest type on a cat and on a wolf (both flanks, lid shut and open), of sitting and baby pets, of a copper golem emptying a pet's chest, and of the pet's chest screen, where it hovers and really clicks the remove-chest button and checks that the chest and its contents land on the ground, into `run/smoke-screens/screenshots`. It needs Fabric API on the runtime classpath:
 
