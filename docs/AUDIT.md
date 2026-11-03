@@ -29,8 +29,8 @@ The [CurseForge comments page](https://www.curseforge.com/minecraft/mc-mods/ches
 - Client detection referenced a Cloth Config demo class. It now checks the public API without eagerly initializing optional classes.
 - Cats whose model a resource pack rebuilt with Entity Model Features had their saddlebags floating at the head. The chest layer posed the model a second time right before reading it, which undid the animation Entity Model Features runs just before the layers. Rebuilt cats are now read as that mod left them and the bags are placed from the measured torso, scaled for kittens and spread for wider torsos; vanilla cats keep their previous placement. Verified in a real client with Fresh Animations 1.11.2 on EMF 3.3.12 and ETF 7.2.6, alone and together with Sodium, Iris, Entity Culling and ImmediatelyFast.
 - Texture lookups cached resource-pack misses permanently. They now use the current resource manager, including after reload.
-- Old rendering called immediate-buffer APIs removed in 1.21.11. Chest geometry and icons now use deferred submissions; each pet gets its own submitted model-part transform.
-- Release metadata is exact for Minecraft 1.21.11 rather than claiming broad, untested Minecraft compatibility. Original unrelated manifest values are removed.
+- Old rendering called immediate-buffer APIs removed in 1.21.9. Chest geometry and icons now use deferred submissions; each pet gets its own submitted model-part transform.
+- Release metadata is exact for the one Minecraft version each build targets (1.21.11, 1.21.10 or 1.21.9) rather than claiming broad, untested Minecraft compatibility. Original unrelated manifest values are removed.
 
 ## Duplication history and limits
 
@@ -38,9 +38,9 @@ Upstream [#7](https://github.com/Khajiitos/ChestedCompanions/issues/7) is alread
 
 ## Optional integrations
 
-[More Chest Variants](https://modrinth.com/mod/more-chest-variants-lieonlion) publishes 1.21.11 Fabric and NeoForge builds. Original optional item-tag entries and all eleven custom textures are retained; pale oak is added using its existing standard chest texture. Missing mods do not prevent startup. [Cat Loaf](https://modrinth.com/mod/cat-loaf) currently stops at 1.21.3; its original pose handling remains, without declaring an unsupported binary dependency.
+[More Chest Variants](https://modrinth.com/mod/more-chest-variants-lieonlion) publishes Fabric and NeoForge builds for 1.21.11, and one for 1.21.9 and 1.21.10 together. Original optional item-tag entries and all eleven custom textures are retained; pale oak is added using its existing standard chest texture. Missing mods do not prevent startup. [Cat Loaf](https://modrinth.com/mod/cat-loaf) currently stops at 1.21.3; its original pose handling remains, without declaring an unsupported binary dependency.
 
-Minecraft 1.21.11 also includes eight vanilla copper chest items. They are accepted as pet chests. The four oxidation-state visuals use compact 22×11 saddlebag textures; waxed items retain the matching oxidation-state appearance, as in vanilla.
+Minecraft 1.21.9 and later include eight vanilla copper chest items. They are accepted as pet chests. The four oxidation-state visuals use compact 22×11 saddlebag textures; waxed items retain the matching oxidation-state appearance, as in vanilla.
 
 ## Copper pets, golems and chest feedback
 
@@ -52,6 +52,14 @@ These behaviours do not exist upstream, so each lists what it touches and why it
 - **Holding pets still.** While anybody has a pet's chest open, a player or a golem, and while a golem is about to reach it, `LivingEntity#isImmobile` is true for that pet (never while it is hurt, burning or swimming). An immobile entity does not run its AI, so no goal is interrupted: a sitting pet stays seated instead of standing up and sitting down again, and a standing one does not wander off from an open screen.
 - **Removal and drops.** Shears remove the chest, as before, and so does the button beside the pet's chest screen (an ordinary vanilla button showing a crossed-out chest). The screen is a vanilla chest screen whose title is built by a translation from the pet's name and its chest's name ("Cat - Chest"); the client recognises that title, adds the button, and sends the vanilla menu button packet, which the pet's menu answers after the same access, distance and liveness checks as opening the chest. Ordinary contents drop on removal and on death, exactly once, and the chest drops too, in every game mode; Ender contents never drop because they were never the pet's.
 - **Hooks added.** `Cat`/`Wolf`/`TamableAnimal` (state, tick, events, a freeze goal), `LivingEntity#isImmobile` (one injection that only answers for pets), `CopperGolem`, `CopperGolemAi` and `TransportItemsBetweenContainers` (three small mixins that add a flag and the extra behaviour, and make the vanilla transport behaviour yield), `AbstractContainerScreen#init` on the client (adds the button to pet screens only), and the existing renderer and render-state mixins now also carry the lid opening. All are covered by unit tests on every loader and by the real dedicated-server and real-client scenarios described in [VALIDATION.md](VALIDATION.md).
+
+## Minecraft 1.21.10 and 1.21.9
+
+Both older versions are built from the same source as 1.21.11, which stays the form committed. What differs between them, and how each difference is handled:
+
+- **Names.** 1.21.11 renamed `ResourceLocation` to `Identifier`, moved the cat, the copper golem, their models and the game rules into feature packages, and renamed `Player#canInteractWithEntity`. Stonecutter replacements rename them back for 1.21.10 and 1.21.9, including inside the mixin method descriptors, where a missed one only shows when the game starts. Gameplay code is otherwise identical: the copper golem classes, the render submission API and the menu button packet did not change between 1.21.9 and 1.21.11.
+- **Behaviour.** Three places are real conditions: how the random tick speed is read (typed rules in 1.21.11, an integer lookup before), the render hook of the remove button (1.21.11 made `AbstractButton#renderWidget` final and added `renderContents`), and `RenderType` against `RenderTypes`.
+- **Fabric packaging.** Up to 1.21.10 the code that turns a mod's `assets` and `data` into resource packs is in Fabric API's `fabric-resource-loader-v0`, which 1.21.11 merged into v1. Bundling only v1 on 1.21.10 starts the game without any of the mod's textures or translations ("Reloading ResourceManager: vanilla" only), so the older builds bundle v0 and v1 and the metadata declares both. The modules and their versions are the ones inside the Fabric API release of the same Minecraft version.
 
 ## Forge and NeoForge packaging
 
