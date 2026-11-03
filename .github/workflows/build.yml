@@ -62,7 +62,7 @@ jobs:
         if: matrix.profile == 'current'
         uses: actions/upload-artifact@v7
         with:
-          name: Chested-Companions-Revived-1.0.0-mc${{ matrix.mc }}-${{ matrix.loader }}
+          name: Chested-Companions-Revived-1.0.1-mc${{ matrix.mc }}-${{ matrix.loader }}
           path: versions/${{ matrix.mc }}-${{ matrix.loader }}/build/libs/*.jar
           if-no-files-found: error
       - name: Upload test reports

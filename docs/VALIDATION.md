@@ -11,7 +11,7 @@ Local verification completed on 3 November 2026. CI builds, tests and plays ever
 | 1.21.10 | 0.20.1 / 0.17.3 | 21.10.64 / 21.10.0-beta | 60.1.18 / 60.0.0 |
 | 1.21.9 | 0.20.1 / 0.17.3 | 21.9.16-beta / 21.9.0-beta | 59.0.5 / 59.0.0 |
 
-- Unit cases: configuration persistence/migration/invalid input; chest transfer/drop/invalidation/access; personal Ender inventory sharing and protection; all eight vanilla copper chest items accepted by the pet chest tag; open and close sounds, lid animation and opener tracking; copper aging, waxing and scraping at the vanilla pace; copper golem pickup and its hand-over to vanilla delivery; the remove-chest button with its access and distance rules and the chest coming back in every game mode, the screen title naming the pet and its chest; pets held still while their chest is open or a golem is about to reach them; torso measurement on the real vanilla cat and kitten meshes.
+- Unit cases: configuration persistence/migration/invalid input; chest transfer/drop/invalidation/access; personal Ender inventory sharing and protection; all eight vanilla copper chest items accepted by the pet chest tag; open and close sounds, lid animation and opener tracking; copper aging, waxing and scraping at the vanilla pace; copper golem pickup and its hand-over to vanilla delivery; the remove-chest button with its access and distance rules and the chest coming back in every game mode, the screen title naming the pet and its chest; pets held still while their chest is open or a golem is about to reach them; torso measurement on the real vanilla cat, kitten, wolf and pup meshes, and the clearance between the plane an open saddlebag lid stands in and the side of the torso on those four meshes.
 - Hidden Fabric client: tested locally without Fabric API; window remains invisible throughout creation and startup.
 - Five special saddlebag sprites (Ender plus four copper oxidation levels) are packaged at 22×11 pixels and checked by the smoke client and artifact verifier.
 - Real dedicated server (`runSmokeServer`, Fabric): a copper golem emptying a sitting cat's copper chest into a placed chest from the vanilla reach while the pet stays seated and does not move, a cat and a wolf with somewhere to go held still while their chest is open, copper chest oxidation and waxing, and chest removal and death drops, failing on the first duplicated or lost item.
@@ -21,13 +21,13 @@ Every row holds for the three Minecraft versions, locally or in CI, unless it na
 
 | Check | Result |
 | --- | --- |
-| Fabric builds, pinned and minimum loader | Passed; 65 unit tests |
-| Forge builds, pinned and minimum loader | Passed; 65 unit tests |
-| NeoForge builds, pinned and minimum loader | Passed; 69 tests including real mixed-in entity persistence, legacy migration and loaded item tags |
+| Fabric builds, pinned and minimum loader | Passed; 73 unit tests |
+| Forge builds, pinned and minimum loader | Passed; 73 unit tests |
+| NeoForge builds, pinned and minimum loader | Passed; 77 tests including real mixed-in entity persistence, legacy migration and loaded item tags |
 | Hidden Fabric client without Fabric API | Passed; the mod's assets load through the bundled resource-loader modules |
 | Hidden Fabric client with Cloth Config, Mod Menu and Fabric API | Passed; configuration screen constructed and initialized |
 | Release metadata, mixin registry, copper/Ender saddlebag sprites, optional tags and MCV textures | Passed for all three loaders |
-| More Chest Variants + Quad on NeoForge | Passed on 1.21.11 and 1.21.10; all 69 tests, including all twelve optional chest variants. Not run on 1.21.9: the More Chest Variants build for 1.21.9 and 1.21.10 requires NeoForge 21.10.63 or newer |
+| More Chest Variants + Quad on NeoForge | Passed on 1.21.11 and 1.21.10; all 77 tests, including all twelve optional chest variants. Not run on 1.21.9: the More Chest Variants build for 1.21.9 and 1.21.10 requires NeoForge 21.10.63 or newer |
 | More Chest Variants + Quad on hidden Fabric client | Passed; registered items and pale oak texture verified |
 | Forge game test server | Starts the real server with the mod and its mixins |
 | Real dedicated server scenarios | Passed |
