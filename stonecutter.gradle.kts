@@ -41,6 +41,8 @@ stonecutter parameters {
         replace("minecraft.setScreen(", "minecraft.gui.setScreen(")
         replace("client.getOverlay()", "client.gui.overlay()")
         replace("client.screen", "client.gui.screen()")
+        replace("client.options.hideGui = true;", "if (!client.gui.hud.isHidden()) client.gui.hud.toggle();")
+        replace("world.getClientLevel()", "world.getConnection()")
         replace("!Minecraft.renderNames()", "Minecraft.getInstance().gui.hud.isHidden()")
         replace("EntityType.CAT", "net.minecraft.world.entity.EntityTypes.CAT")
         replace("EntityType.WOLF", "net.minecraft.world.entity.EntityTypes.WOLF")

@@ -15,6 +15,11 @@ on:
         type: choice
         default: all
         options: [all, '26.2', '26.3']
+      checks:
+        description: Validation stage
+        type: choice
+        default: all
+        options: [all, build, game]
 
 permissions:
   contents: read
@@ -25,6 +30,7 @@ concurrency:
 
 jobs:
   build:
+    if: inputs.checks != 'game'
     name: ${{ matrix.mc }} ${{ matrix.loader }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -82,6 +88,7 @@ jobs:
           if-no-files-found: ignore
 
   hidden-client:
+    if: inputs.checks != 'build'
     name: Hidden Fabric ${{ matrix.mc }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -123,6 +130,7 @@ jobs:
           if-no-files-found: ignore
 
   server-scenarios:
+    if: inputs.checks != 'build'
     name: Real server scenarios (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -157,6 +165,7 @@ jobs:
           if-no-files-found: ignore
 
   client-screenshots:
+    if: inputs.checks != 'build'
     name: Real client rendering (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
