@@ -1,4 +1,4 @@
-"""Build the native-source + owned-assets Horizon .hmod, reproducibly."""
+"""Build the source bundle with embedded, owned assets as a native .hnmod."""
 import hashlib
 import json
 from pathlib import Path
@@ -16,19 +16,16 @@ def package():
         raise ValueError("this port targets Minecraft 26.3")
     native = dict(schema=1, id=manifest["id"], version=manifest["version"], game="26.3",
                   horizon=compatibility["horizon_revision"], mixins=compatibility["horizon_mixins_revision"])
-    files = {"horizon-native.json": (json.dumps(native, indent=2, sort_keys=True) + "\n").encode(),
-             "horizon-mod.toml": (ROOT / "horizon-mod.toml").read_bytes()}
+    files = {"horizon-native.json": (json.dumps(native, indent=2, sort_keys=True) + "\n").encode()}
     for path in sorted(bundle.rglob("*")):
-        if path.is_file() and (path.suffix in (".rs", ".toml") or path.name in ("LICENSE", "NOTICE.md")):
+        if path.is_file() and (path.suffix in (".rs", ".toml") or path.name in ("LICENSE", "NOTICE.md") or path.relative_to(bundle).parts[0] == "data"):
             if path.is_symlink():
                 raise ValueError(f"bundle symlink: {path}")
             files[path.relative_to(ROOT).as_posix()] = path.read_bytes()
-    for path in sorted((ROOT / "assets").rglob("*")):
-        if path.is_file():
-            if path.is_symlink() or path.suffix not in (".png", ".json"):
-                raise ValueError(f"unexpected asset: {path}")
-            files[path.relative_to(ROOT).as_posix()] = path.read_bytes()
-    output = ROOT / "target" / f"chested_companions-{manifest['version']}+26.3.hmod"
+    for name, data in files.items():
+        if Path(name).suffix in (".rs", ".toml", ".json", ".md") or name.endswith("/LICENSE"):
+            files[name] = data.replace(b"\r\n", b"\n")
+    output = ROOT / "target" / f"chested_companions-{manifest['version']}+26.3.hnmod"
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w") as archive:
         for name, data in sorted(files.items()):

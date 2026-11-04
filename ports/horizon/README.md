@@ -20,6 +20,12 @@ The exact supported engine and transformation-tool revisions are recorded in
 `compatibility.json`. The starting target is Horizon's official
 Nightly 2026-11-04, commit `67dad0d1a5adca139b426c8114e74a33b376ba64`.
 
+The `.hnmod` includes the mod's MIT-licensed textures and models under the
+native bundle's `data/` directory. They are compiled into the game and loaded
+through Horizon's content system. Players do not need a separate saddlebag
+resource pack. Texture packs can override the original `chestedcompanions`
+texture paths.
+
 ## Development
 
 ```sh
@@ -41,7 +47,8 @@ cargo check --locked --manifest-path target/game/Cargo.toml -p horizon-client --
 ```
 
 GitHub Actions runs both the standalone tests and a check of the real modded
-26.3 game. Integration and visual testing must use disposable worlds and
+26.3 game, native persistence tests, package validation and a Windows build.
+Integration and visual testing must use disposable worlds and
 separate Horizon data directories. Minecraft assets and third-party packs
 are not included in this repository.
 
