@@ -46,6 +46,15 @@ class EntityPersistenceTest {
         }
     }
 
+    /** Cat and wolf, looked up by id because their EntityType constants moved to EntityTypes in Minecraft 26.2. */
+    @SuppressWarnings("unchecked")
+    private static java.util.List<EntityType<? extends TamableAnimal>> petTypes() {
+        return java.util.stream.Stream.of("cat", "wolf")
+                .<EntityType<? extends TamableAnimal>>map(name -> (EntityType<? extends TamableAnimal>)net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
+                        .getValue(me.khajiitos.chestedcompanions.common.ChestedCompanions.id("minecraft", name)))
+                .toList();
+    }
+
     private TamableAnimal create(EntityType<? extends TamableAnimal> type, MinecraftServer server) {
         // The ephemeral server supplies registries, not a tickable world. Detached entities
         // use a minimal level and must never attempt chunk access or network tracking.
@@ -61,7 +70,7 @@ class EntityPersistenceTest {
         CCConfig.catInventoryCapacity.set(InventoryCapacity.THREE_ROWS);
         CCConfig.wolfInventoryCapacity.set(InventoryCapacity.THREE_ROWS);
         try {
-            for (var type : java.util.List.of(EntityType.CAT, EntityType.WOLF)) {
+            for (var type : petTypes()) {
                 TamableAnimal animal = create(type, server);
                 IChestEntity pet = (IChestEntity)animal;
                 ItemStack chest = new ItemStack(Items.CHEST);
@@ -89,7 +98,7 @@ class EntityPersistenceTest {
     }
 
     @Test void enderChestSavesOnlyEquipmentAndNeverPetContents(MinecraftServer server) {
-        for (var type : java.util.List.of(EntityType.CAT, EntityType.WOLF)) {
+        for (var type : petTypes()) {
             TamableAnimal animal = create(type, server);
             IChestEntity pet = (IChestEntity)animal;
             pet.chestedCompanions$setChestItemStack(new ItemStack(Items.ENDER_CHEST));
@@ -108,7 +117,7 @@ class EntityPersistenceTest {
     @Test void oldHasChestSavesStillMigrate(MinecraftServer server) {
         CompoundTag legacy = new CompoundTag();
         legacy.putBoolean("HasChest", true);
-        for (var type : java.util.List.of(EntityType.CAT, EntityType.WOLF)) {
+        for (var type : petTypes()) {
             TamableAnimal loaded = create(type, server);
             loaded.load(TagValueInput.create(ProblemReporter.DISCARDING, server.registryAccess(), legacy));
             assertTrue(((IChestEntity)loaded).chestedCompanions$getChestItemStack().is(Items.CHEST));

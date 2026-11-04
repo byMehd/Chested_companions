@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import me.khajiitos.chestedcompanions.common.client.renderer.ChestIconRenderer;
 import me.khajiitos.chestedcompanions.common.util.IChestEntity;
 import me.khajiitos.chestedcompanions.common.util.IChestEntityRenderState;
-import net.minecraft.client.model.animal.feline.CatModel;
+import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import me.khajiitos.chestedcompanions.common.client.renderer.layer.CatChestLayer;
@@ -20,8 +20,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(CatRenderer.class)
-public abstract class CatRendererMixin extends MobRenderer<Cat, CatRenderState, CatModel> {
-    public CatRendererMixin(EntityRendererProvider.Context $$0, CatModel $$1, float $$2) {
+public abstract class CatRendererMixin extends MobRenderer<Cat, CatRenderState, EntityModel<CatRenderState>> {
+    public CatRendererMixin(EntityRendererProvider.Context $$0, EntityModel<CatRenderState> $$1, float $$2) {
         super($$0, $$1, $$2);
     }
 

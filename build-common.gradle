@@ -4,7 +4,8 @@ version = mod_version + '+' + minecraft_version
 def loader = project.name.substring(project.name.lastIndexOf('-') + 1)
 base.archivesName = "chested-companions-revived-${loader}"
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    // Minecraft 1.21 runs on Java 21 and Minecraft 26 on Java 25; the mod is compiled for the Java the game runs on.
+    toolchain.languageVersion = JavaLanguageVersion.of(java_toolchain as int)
     withSourcesJar()
 }
 sourceSets.main.java.srcDir rootProject.file("loaders/${loader}/src/main/java")
@@ -15,7 +16,7 @@ repositories {
     maven { url = 'https://maven.terraformersmc.com/releases/' }
     maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
 }
-tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 21 }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = java_toolchain as int }
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -32,8 +33,8 @@ tasks.withType(Test).configureEach {
     }
 }
 processResources {
-    def props = [version: project.version, minecraft_version: minecraft_version,
-                 minecraft_range: minecraft_range, neo_range: neo_range, forge_range: forge_range, forge_loader: forge_loader]
+    def props = [version: project.version, minecraft_version: minecraft_version, java_version: java_toolchain,
+                 fabric_loader_minimum: fabric_loader_minimum, minecraft_range: minecraft_range, neo_range: neo_range, forge_range: forge_range, forge_loader: forge_loader]
     inputs.properties props
     filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml', 'META-INF/mods.toml']) { expand props }
 }

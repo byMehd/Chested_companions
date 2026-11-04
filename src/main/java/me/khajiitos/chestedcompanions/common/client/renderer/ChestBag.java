@@ -21,6 +21,8 @@ public final class ChestBag {
     public static final int BODY_ROWS = 5;
     /** Each bag is drawn this many units larger than its texture on every side. */
     public static final float GROW = 1.0F;
+    /** The least gap kept between the plane an open lid lies in and the side of the torso, in bag units. */
+    public static final float LID_CLEARANCE = 0.3F;
     private static final int WIDTH = 8;
     private static final int DEPTH = 3;
     private static final float TEXEL = (WIDTH + 2 * GROW) / WIDTH;
@@ -59,6 +61,30 @@ public final class ChestBag {
 
     public ModelPart.Cube bodyCube() {
         return this.body;
+    }
+
+    /**
+     * How far the hinge is from the middle of the pet, in bag units. An open lid stands in the plane of its hinge, on
+     * the side of the pet.
+     */
+    public float hingeDistance() {
+        return Math.abs(this.hingeZ);
+    }
+
+    /**
+     * An open lid is a slab standing in the plane of the hinge. The side of the torso is flat too, and where the two
+     * planes coincide the game draws both in the same place, so they flicker. This is how far the bags have to move
+     * apart, in bag units, so that the plane keeps {@value #LID_CLEARANCE} bag units from the side of the torso: it ends
+     * up outside the torso, where the open lid shows. A plane already that far outside the torso stays. Buried lids are brought outside too.
+     *
+     * @param plane     distance from the middle of the pet to the hinge planes, in model units
+     * @param halfWidth distance from the middle of the pet to the sides of its torso, in model units
+     * @param scale     scale of the bags, which turns bag units into model units
+     */
+    public static float spreadToClear(float plane, float halfWidth, float scale) {
+        float gap = LID_CLEARANCE * scale;
+        float clearance = plane - halfWidth;
+        return clearance < gap ? (gap - clearance) / scale : 0.0F;
     }
 
     public ModelPart createBody() {

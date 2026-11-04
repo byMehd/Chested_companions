@@ -1,7 +1,8 @@
 plugins { id 'net.minecraftforge.gradle' version '7.0.40' }
 apply from: rootProject.file('build-common.gradle')
 minecraft {
-    mappings channel: 'official', version: minecraft_version
+    // Minecraft 26 ships Mojang's names, so ForgeGradle has no mappings to apply there.
+    if (!unobfuscated.toBoolean()) mappings channel: 'official', version: minecraft_version
     runs {
         configureEach {
             mods { register('chestedcompanions_revived') { source sourceSets.main } }

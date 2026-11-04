@@ -21,10 +21,29 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.Heightmap;
 
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+
+import me.khajiitos.chestedcompanions.common.util.IChestEntityRenderState;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.Model;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.world.entity.Entity;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
+import java.util.List;
+import java.util.Locale;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -57,9 +76,36 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
         return only.isEmpty() || Arrays.asList(only.split(",")).contains(part);
     }
 
+    /** Parts that are left out of the complete run, because they take many screenshots: {@code zfight} and {@code zfightadults}. */
+    private static boolean requested(String part) {
+        return Arrays.asList(System.getProperty("revived.screens.only", "").split(",")).contains(part);
+    }
+
     @Override
     public void runTest(ClientGameTestContext context) {
         context.runOnClient(client -> {
+            String pack = System.getProperty("revived.screens.pack", "");
+            if (!pack.isEmpty()) {
+                var loader = net.fabricmc.loader.api.FabricLoader.getInstance();
+                if (!loader.isModLoaded("entity_model_features") || !loader.isModLoaded("entity_texture_features"))
+                    throw new AssertionError("Model-pack rendering requires EMF and ETF");
+                var model = client.getResourceManager().getResource(
+                        Identifier.fromNamespaceAndPath("minecraft", "optifine/cem/cat.jem")).orElseThrow();
+                String expectedPack = pack.equals("fatcat") ? "fat-cat-test.zip" : "freshanimations-test.zip";
+                if (!model.sourcePackId().equals("file/" + expectedPack))
+                    throw new AssertionError("The selected model pack must be active before taking screenshots");
+                //? if >=26.1 {
+                /*if (pack.equals("freshanimations")) {
+                    for (String baby : java.util.List.of("cat_baby", "wolf_baby")) {
+                        var resource = client.getResourceManager().getResource(Identifier.fromNamespaceAndPath(
+                                "minecraft", "optifine/cem/" + baby + ".jem")).orElseThrow();
+                        if (!resource.sourcePackId().equals("file/" + expectedPack))
+                            throw new AssertionError("Fresh Animations must supply its Minecraft 26 baby models");
+                    }
+                }
+                *///?}
+                System.out.println("REVIVED_MODEL_PACK_ACTIVE: " + pack + ", original model and textures, test-only pack metadata");
+            }
             client.options.hideGui = true;
             client.options.fov().set(40);
             // A short render distance: on a small CI runner the client's chunk meshing starves the world loading, which
@@ -93,6 +139,9 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             }
             if (wanted("sitting")) sittingPets(context, world, groundY);
             if (wanted("baby")) babyPets(context, world, groundY);
+            if (requested("geometry")) geometryScenes(context, world, groundY);
+            if (requested("zfight")) lidViews(context, world, groundY, true);
+            if (requested("zfightadults")) lidViews(context, world, groundY, false);
             if (wanted("mcv")) modChests(context, world, groundY);
             if (wanted("golem")) golemVisit(context, world, groundY);
             if (wanted("gui")) petScreen(context, world, groundY);
@@ -145,15 +194,18 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             setLid(world, uuid, true);
             context.waitTicks(14);
             context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_copper_sitting_a_open");
+            look(world, groundY, -1);
+            context.waitTicks(8);
+            context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_copper_sitting_b_open");
             discard(world, uuid);
         }
     }
 
-    /** Kittens and pups wear the bags at half size, standing and sitting. */
+    /** Kittens and pups wear the bags at half size, standing and sitting, with the lid open, seen from both flanks. */
     private static void babyPets(ClientGameTestContext context, TestSingleplayerContext world, int groundY) {
         for (boolean wolf : new boolean[]{false, true}) {
             for (boolean sitting : new boolean[]{false, true}) {
-                String name = (wolf ? "wolf" : "cat") + "_copper_baby" + (sitting ? "_sitting" : "") + "_a_open";
+                String name = (wolf ? "wolf" : "cat") + "_copper_baby" + (sitting ? "_sitting" : "");
                 UUID uuid = spawnPet(world, groundY, wolf, Items.COPPER_CHEST);
                 world.getServer().runOnServer(server -> {
                     TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
@@ -164,9 +216,169 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
                 look(world, groundY, 1);
                 setLid(world, uuid, true);
                 context.waitTicks(22);
-                context.takeScreenshot(PREFIX + name);
+                context.takeScreenshot(PREFIX + name + "_a_open");
+                look(world, groundY, -1);
+                context.waitTicks(8);
+                context.takeScreenshot(PREFIX + name + "_b_open");
                 discard(world, uuid);
             }
+        }
+    }
+
+    /**
+     * Camera positions of {@link #lidViews}: distance in blocks, degrees round the pet from the flank, degrees looking
+     * down. A pet is not drawn beyond about 64 times its size, which is 20 blocks for a kitten.
+     */
+    private static final double[][] LID_VIEWS = {{2.6, 0, 8}, {2.6, 35, 30}, {2.6, -35, 30}, {1.3, 0, 8}, {10, 0, 3}, {10, 0, 20}, {15, 0, 5}};
+
+    /**
+     * Where the lids of the bags lie flat against the torso, they flicker (z-fighting) at some angles and distances only:
+     * every pose of a cat or a wolf, lid shut and open, from both flanks and from near, far, high and oblique cameras.
+     * Run with {@code -Drevived.screens.only=zfight} (kittens and pups) or {@code zfightadults}.
+     */
+    private static void lidViews(ClientGameTestContext context, TestSingleplayerContext world, int groundY, boolean baby) {
+        for (boolean wolf : new boolean[]{false, true}) {
+            for (boolean sitting : new boolean[]{false, true}) {
+                UUID uuid = spawnPet(world, groundY, wolf, Items.COPPER_CHEST);
+                world.getServer().runOnServer(server -> {
+                    TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
+                    pet.setBaby(baby);
+                    pet.setInSittingPose(sitting);
+                });
+                context.waitTicks(15);
+                for (boolean open : new boolean[]{true, false}) {
+                    setLid(world, uuid, open);
+                    context.waitTicks(open ? 22 : 16);
+                    for (int side : new int[]{1, -1}) {
+                        for (int view = 0; view < LID_VIEWS.length; view++) {
+                            double[] at = LID_VIEWS[view];
+                            lookFrom(world, groundY, side, at[0], at[1], at[2]);
+                            context.waitTicks(6);
+                            context.takeScreenshot(PREFIX + "zf_" + (wolf ? "wolf" : "cat") + (baby ? "_baby" : "_adult")
+                                    + (sitting ? "_sit" : "_stand") + (open ? "_open_" : "_shut_") + (side == 1 ? "a" : "b") + "_v" + view);
+                        }
+                    }
+                }
+                discard(world, uuid);
+            }
+        }
+    }
+
+    /** Puts the (invisible, spectating) camera at a distance from the pet, round it from the given flank, looking down at it. */
+    private static void lookFrom(TestSingleplayerContext world, int groundY, int side, double distance, double azimuth, double pitch) {
+        double angle = Math.toRadians(azimuth) + (side == 1 ? 0.0 : Math.PI);
+        // Eyes at the height that keeps the pet's back on the line of sight, 1.62 blocks above the feet of a spectator.
+        double eyes = 0.35 + distance * Math.tan(Math.toRadians(pitch));
+        world.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.3f %.3f %.3f %.2f %.2f",
+                0.5 + distance * Math.cos(angle), groundY + eyes - 1.62, 0.5 + distance * Math.sin(angle), 90.0 + Math.toDegrees(angle), pitch));
+    }
+
+    /**
+     * Opt-in ({@code geometry}): for every pet and pose, runs the real renderer into a collector that keeps the chest part the
+     * layer submits, and prints one JSON line with the corners of every cube of the posed model and of the bags, for collision
+     * maths done outside the game. Nothing is photographed.
+     */
+    private static void geometryScenes(ClientGameTestContext context, TestSingleplayerContext world, int groundY) {
+        for (boolean wolf : new boolean[]{false, true}) {
+            for (boolean baby : new boolean[]{false, true}) {
+                for (boolean sitting : new boolean[]{false, true}) {
+                    UUID uuid = spawnPet(world, groundY, wolf, Items.COPPER_CHEST);
+                    world.getServer().runOnServer(server -> {
+                        TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
+                        pet.setBaby(baby);
+                        pet.setInSittingPose(sitting);
+                    });
+                    context.waitTicks(15);
+                    look(world, groundY, 1);
+                    context.waitTicks(8);
+                    String scene = (wolf ? "wolf" : "cat") + (baby ? "_baby" : "") + (sitting ? "_sitting" : "");
+                    context.runOnClient(client -> {
+                        for (Entity entity : client.level.entitiesForRendering()) {
+                            if (entity.getUUID().equals(uuid)) printGeometry(client, entity, scene);
+                        }
+                    });
+                    discard(world, uuid);
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void printGeometry(Minecraft client, Entity entity, String scene) {
+        EntityRenderDispatcher dispatcher = client.getEntityRenderDispatcher();
+        EntityRenderer renderer = dispatcher.getRenderer(entity);
+        EntityRenderState state = dispatcher.extractEntity(entity, 1.0F);
+        for (float openness : new float[]{0.0F, 1.0F}) {
+            ((IChestEntityRenderState) state).chestedCompanions$setLidOpenness(openness);
+            StringBuilder line = new StringBuilder();
+            float lid = openness;
+            SubmitNodeCollector collector = (SubmitNodeCollector) Proxy.newProxyInstance(
+                    SubmitNodeCollector.class.getClassLoader(), new Class<?>[]{SubmitNodeCollector.class}, (proxy, method, args) -> {
+                        if (method.getDeclaringClass() == Object.class) {
+                            return switch (method.getName()) {
+                                case "hashCode" -> System.identityHashCode(proxy);
+                                case "equals" -> proxy == args[0];
+                                default -> "qa-collector";
+                            };
+                        }
+                        if (method.getName().equals("submitModelPart") && args[0] instanceof ModelPart chest && chest.hasChild("left_body")) {
+                            Model model = ((LivingEntityRenderer<?, ?, ?>) renderer).getModel();
+                            line.append("{\"scene\":\"").append(scene).append("\",\"lid\":").append(lid)
+                                    .append(",\"model\":\"").append(model.getClass().getSimpleName()).append("\",\"pet\":[");
+                            solids(model.root(), "", new PoseStack(), true, line);
+                            line.append("],\"chest\":[");
+                            solids(chest, "", new PoseStack(), true, line);
+                            line.append("]}");
+                        }
+                        return method.getReturnType().isInstance(proxy) ? proxy : null;
+                    });
+            renderer.submit(state, new PoseStack(), collector, new net.minecraft.client.renderer.state.CameraRenderState());
+            System.out.println("REVIVED_QA_GEOM " + (line.length() == 0 ? "{\"scene\":\"" + scene + "\",\"lid\":" + openness + ",\"missing\":true}" : line));
+        }
+    }
+
+    /** Every cube below a part as its eight corners (model units: sixteenths of a block) after the poses of the parts above it. */
+    @SuppressWarnings("unchecked")
+    private static void solids(ModelPart part, String path, PoseStack stack, boolean visibleAbove, StringBuilder out) {
+        try {
+            Field cubesField = ModelPart.class.getDeclaredField("cubes");
+            Field childrenField = ModelPart.class.getDeclaredField("children");
+            cubesField.setAccessible(true);
+            childrenField.setAccessible(true);
+            stack.pushPose();
+            part.translateAndRotate(stack);
+            boolean visible = visibleAbove && part.visible;
+            Matrix4f pose = new Matrix4f(stack.last().pose());
+            List<ModelPart.Cube> cubes = (List<ModelPart.Cube>) cubesField.get(part);
+            for (int i = 0; i < cubes.size(); i++) {
+                ModelPart.Cube cube = cubes.get(i);
+                float[] lo = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
+                float[] hi = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+                for (ModelPart.Polygon polygon : cube.polygons) {
+                    for (ModelPart.Vertex vertex : polygon.vertices()) {
+                        float[] v = {vertex.x(), vertex.y(), vertex.z()};
+                        for (int a = 0; a < 3; a++) {
+                            lo[a] = Math.min(lo[a], v[a]);
+                            hi[a] = Math.max(hi[a], v[a]);
+                        }
+                    }
+                }
+                if (out.charAt(out.length() - 1) != '[') out.append(',');
+                out.append("{\"path\":\"").append(path.isEmpty() ? "/" : path).append("\",\"i\":").append(i)
+                        .append(",\"vis\":").append(visible && !part.skipDraw).append(",\"c\":[");
+                for (int corner = 0; corner < 8; corner++) {
+                    Vector3f p = pose.transformPosition(((corner & 1) == 0 ? lo[0] : hi[0]) / 16.0F,
+                            ((corner & 2) == 0 ? lo[1] : hi[1]) / 16.0F, ((corner & 4) == 0 ? lo[2] : hi[2]) / 16.0F, new Vector3f());
+                    out.append(corner == 0 ? "" : ",").append(String.format(Locale.ROOT, "%.3f,%.3f,%.3f", p.x * 16.0F, p.y * 16.0F, p.z * 16.0F));
+                }
+                out.append("]}");
+            }
+            for (var child : ((java.util.Map<String, ModelPart>) childrenField.get(part)).entrySet()) {
+                solids(child.getValue(), path + "/" + child.getKey(), stack, visible, out);
+            }
+            stack.popPose();
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
         }
     }
 
@@ -224,7 +436,7 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
         context.getInput().setCursorPos(button[0], button[1]);
         context.waitTicks(25);
         context.takeScreenshot(PREFIX + "gui_pet_chest_hover");
-        context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         context.waitTicks(15);
 
         boolean closed = context.computeOnClient(client -> client.screen == null);

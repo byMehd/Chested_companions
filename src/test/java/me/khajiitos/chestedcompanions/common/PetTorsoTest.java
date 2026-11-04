@@ -1,11 +1,23 @@
 package me.khajiitos.chestedcompanions.common;
 
+import me.khajiitos.chestedcompanions.common.client.renderer.ChestBag;
 import me.khajiitos.chestedcompanions.common.client.renderer.PetTorso;
+import me.khajiitos.chestedcompanions.common.client.renderer.layer.ChestLayer;
+import net.minecraft.SharedConstants;
+//? if >=26.1 {
+/*import net.minecraft.client.model.animal.feline.AdultFelineModel;
+import net.minecraft.client.model.animal.feline.BabyFelineModel;
+*///?} else {
 import net.minecraft.client.model.animal.feline.FelineModel;
+//?}
+import net.minecraft.client.model.geom.LayerDefinitions;
+import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
+import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -30,8 +42,15 @@ class PetTorsoTest {
     }
 
     private static ModelPart vanillaBody(boolean baby) {
+        //? if >=26.1 {
+        /*// The baby cat has a model of its own since 26.1.
+        LayerDefinition layer = baby ? BabyFelineModel.createBabyLayer()
+                : LayerDefinition.create(AdultFelineModel.createBodyMesh(CubeDeformation.NONE), 64, 32);
+        return layer.bakeRoot().getChild("body");
+        *///?} else {
         LayerDefinition layer = LayerDefinition.create(FelineModel.createBodyMesh(CubeDeformation.NONE), 64, 32);
         return (baby ? layer.apply(FelineModel.BABY_TRANSFORMER) : layer).bakeRoot().getChild("body");
+        //?}
     }
 
     @Test void theVanillaCatTorsoIsFoundWhereTheLayerExpectsIt() {
@@ -43,17 +62,28 @@ class PetTorsoTest {
         assertEquals(1.0F, torso.z(), 1.0E-4F);
         assertEquals(16.0F, torso.length(), 1.0E-4F);
         assertEquals(2.0F, torso.halfWidth(), 1.0E-4F);
+        assertEquals(2.0F, torso.surfaceHalfWidth(), 1.0E-4F);
         // The chest part of the vanilla layout (body + 2 down) is the same point as the one measured from the torso.
         assertEquals(body.y + 2.0F, torso.y() - 3.0F, 1.0E-4F);
         assertEquals(body.z, torso.z() - 11.0F, 1.0E-4F);
     }
 
+    //? if >=26.1 {
+    /*// Since 26.1 the baby is a box of its own (4 wide, 3 high, 7 long) instead of the adult one scaled down by half.
+    @Test void aBabyCatTorsoIsItsOwnShorterBox() {
+        PetTorso torso = PetTorso.find(vanillaBody(true));
+        assertNotNull(torso);
+        assertEquals(7.0F, torso.length(), 1.0E-3F);
+        assertEquals(2.0F, torso.halfWidth(), 1.0E-3F);
+    }
+    *///?} else {
     @Test void aBabyCatTorsoIsHalfAsLongAndTheSameBagsScaleDownWithIt() {
         PetTorso torso = PetTorso.find(vanillaBody(true));
         assertNotNull(torso);
         assertEquals(8.0F, torso.length(), 1.0E-3F);
         assertEquals(1.0F, torso.halfWidth(), 1.0E-3F);
     }
+    //?}
 
     @Test void aRebuiltCatIsMeasuredThroughEveryPartAboveItsTorso() {
         // The shape Entity Model Features gives Fresh Animations: an empty body part, and the animal below it.
@@ -89,5 +119,136 @@ class PetTorsoTest {
 
     @Test void aModelWithoutCubesHasNoTorso() {
         assertNull(PetTorso.find(new ModelPart(List.of(), Map.of())));
+    }
+
+    /**
+     * Fat Cat on a kitten, as Entity Model Features builds it: the vanilla body part is empty and the whole animal
+     * hangs below it, head included. A baby is half the size and the pack makes its head 1.5 times bigger on top, so the
+     * head ends up at 0.75 against the body's 0.5, and its 9x8x7 cube (volume 213) outweighs the 10x9x14 one of the
+     * body (158).
+     */
+    private static ModelPart fatCatKitten(String headName) {
+        ModelPart head = part(0.0F, -2.0F, -9.0F, 0.0F, List.of(cube(-4.5F, -4.0F, -4.0F, 9.0F, 8.0F, 7.0F)), Map.of());
+        head.xScale = head.yScale = head.zScale = 1.5F;
+        ModelPart torso = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(cube(-5.0F, -4.5F, -7.0F, 10.0F, 9.0F, 14.0F)), Map.of());
+        ModelPart leg = part(3.4F, 4.0F, -4.0F, 0.0F, List.of(cube(-1.5F, -1.5F, -1.5F, 3.0F, 6.0F, 3.0F)), Map.of());
+        ModelPart tail = part(0.0F, -1.0F, 9.0F, 0.0F, List.of(cube(-1.5F, -1.5F, -1.5F, 3.0F, 3.0F, 12.0F)), Map.of());
+        ModelPart rotation = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(), Map.of(
+                headName, head, "EMF_body_cat", torso, "EMF_front_right_leg_cat", leg, "EMF_tail_cat", tail));
+        ModelPart wrapper = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(), Map.of("EMF_body_rotation", rotation));
+        ModelPart body = part(0.0F, 20.0F, 0.0F, 0.0F, List.of(), Map.of("EMF_body", wrapper));
+        body.xScale = body.yScale = body.zScale = 0.5F;
+        return body;
+    }
+
+    @Test void aKittensHeadBiggerThanItsBodyIsNotTakenForItsTorso() {
+        PetTorso torso = PetTorso.find(fatCatKitten("EMF_head_cat"));
+        assertNotNull(torso);
+        assertEquals(0.0F, torso.x(), 1.0E-3F);
+        assertEquals(20.0F, torso.y(), 1.0E-3F);
+        assertEquals(0.0F, torso.z(), 1.0E-3F);
+        assertEquals(7.0F, torso.length(), 1.0E-3F);
+        assertEquals(2.5F, torso.halfWidth(), 1.0E-3F);
+    }
+
+    @Test void aHeadNoPartIsNamedAfterIsStillTheBiggestCube() {
+        // Nothing but its size tells this head from the torso, and it is the bigger: it also shows that the head is the
+        // bigger cube in the kitten above, so that the test of that one does not pass by itself.
+        PetTorso torso = PetTorso.find(fatCatKitten("EMF_skull"));
+        assertNotNull(torso);
+        assertEquals(6.75F, torso.length(), 1.0E-3F);
+    }
+
+    @Test void aModelWithNothingButHeadPartsStillHasATorso() {
+        ModelPart head = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(cube(-4.0F, -4.0F, -4.0F, 8.0F, 8.0F, 8.0F)), Map.of());
+        PetTorso torso = PetTorso.find(part(0.0F, 12.0F, 0.0F, 0.0F, List.of(), Map.of("EMF_Head2", head)));
+        assertNotNull(torso);
+        assertEquals(8.0F, torso.length(), 1.0E-3F);
+    }
+
+    @Test void anUnnamedCubeBelowANamedHeadIsStillExcluded() {
+        ModelPart headCube = part(0, 0, 0, 0, List.of(cube(-5, -5, -5, 10, 10, 10)), Map.of());
+        ModelPart head = part(0, 0, 0, 0, List.of(), Map.of("geometry", headCube));
+        ModelPart body = part(0, 0, 0, 0, List.of(cube(-2, -4, -3, 4, 8, 6)), Map.of("EMF_Head2", head));
+        assertEquals(8.0F, PetTorso.find(body).length(), 1.0E-4F);
+    }
+
+    @Test void headInsideAnUnrelatedPartNameDoesNotExcludeItsBody() {
+        ModelPart torso = part(0, 0, 0, 0, List.of(cube(-5, -4, -7, 10, 8, 14)), Map.of());
+        ModelPart leg = part(0, 0, 0, 0, List.of(cube(-1, -2, -1, 2, 4, 2)), Map.of());
+        ModelPart root = part(0, 0, 0, 0, List.of(), Map.of("overhead_body", torso, "leg", leg));
+        assertEquals(14.0F, PetTorso.find(root).length(), 1.0E-4F);
+    }
+
+    @Test void theModelRootScaleIsIncludedInTheDrawnTorso() {
+        ModelPart body = vanillaBody(false);
+        ModelPart root = part(0, 0, 0, 0, List.of(), Map.of("body", body));
+        root.xScale = root.yScale = root.zScale = 0.8F;
+        PetTorso torso = PetTorso.find(body, root);
+        assertNotNull(torso);
+        assertEquals(1.6F, torso.surfaceHalfWidth(), 1.0E-4F);
+        assertEquals(12.8F, torso.length(), 1.0E-4F);
+    }
+
+    @Test void aFreshAnimationsManeIsNotTakenForTheWolfTorso() {
+        ModelPart mane = part(0, -2, -3, 0, List.of(cube(-4, -3, -3.5F, 8, 6, 7)), Map.of());
+        ModelPart torso = part(0, 0, 0, 0, List.of(cube(-3, -4.5F, -3, 6, 9, 6)), Map.of("EMF_mane2", mane));
+        PetTorso found = PetTorso.find(torso);
+        assertNotNull(found);
+        assertEquals(3.0F, found.surfaceHalfWidth(), 1.0E-4F);
+        assertEquals(9.0F, found.length(), 1.0E-4F);
+    }
+
+    @Test void theVanillaWolfTorsoIsItsBodyPartAndNotItsMane() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        var layers = LayerDefinitions.createRoots();
+        ModelPart wolf = layers.get(ModelLayers.WOLF).bakeRoot();
+        PetTorso torso = PetTorso.find(wolf.getChild("body"));
+        assertNotNull(torso);
+        assertEquals(3.0F, torso.halfWidth(), 1.0E-4F);
+        assertEquals(9.0F, torso.length(), 1.0E-4F);
+        // The mane is a part of its own, wider (4 from the middle) and bigger than the body: measuring the whole model
+        // would take it for the torso.
+        assertEquals(4.0F, PetTorso.find(wolf).halfWidth(), 1.0E-4F);
+
+        PetTorso pup = PetTorso.find(layers.get(ModelLayers.WOLF_BABY).bakeRoot().getChild("body"));
+        assertNotNull(pup);
+        //? if >=26.1 {
+        /*assertEquals(3.0F, pup.halfWidth(), 1.0E-4F);
+        assertEquals(8.0F, pup.length(), 1.0E-4F);
+        *///?} else {
+        assertEquals(1.5F, pup.halfWidth(), 1.0E-4F);
+        assertEquals(4.5F, pup.length(), 1.0E-4F);
+        //?}
+    }
+
+    /** The open lids of a wolf whose body part is empty, as Entity Model Features leaves it, with this torso below it. */
+    private static float spreadOfARebuiltWolf(float torsoWidth) {
+        ModelPart torso = part(0.0F, 0.0F, 0.0F, 0.0F, List.of(cube(-torsoWidth / 2.0F, -2.0F, -3.0F, torsoWidth, 9.0F, 6.0F)), Map.of());
+        ModelPart body = part(0.0F, 14.0F, 2.0F, PI / 2, List.of(), Map.of("EMF_body", torso));
+
+        ChestBag left = new ChestBag(new Vec3i(-8, -4, 6), false, 0, 0, 22, 11);
+        ChestBag right = new ChestBag(new Vec3i(-8, -4, -9), true, 0, 0, 22, 11);
+        ModelPart chest = new ModelPart(List.of(), Map.of(
+                "left_body", left.createBody(), "left_lid", left.createLid(0.0F),
+                "right_body", right.createBody(), "right_lid", right.createLid(0.0F)));
+        chest.setPos(body.x, body.y, body.z);
+        chest.xScale = chest.yScale = chest.zScale = 0.6F;
+        PetTorso found = PetTorso.find(body);
+        assertNotNull(found);
+        ChestLayer.keepLidsOffTheTorso(left, chest, found);
+        assertEquals(-chest.getChild("right_body").z, chest.getChild("left_body").z, 1.0E-6F, "both bags move apart together");
+        return chest.getChild("left_body").z;
+    }
+
+    @Test void aRebuiltWolfKeepsItsOpenLidsOffItsTorsoToo() {
+        // As wide as the vanilla one: the hinge plane (5 * 0.6 = 3) would lie on its side, so the bags move out a little.
+        assertEquals(ChestBag.LID_CLEARANCE, spreadOfARebuiltWolf(6.0F), 1.0E-4F);
+        // Slightly narrower: the plane is 0.1 outside the torso, which is still too close, so the bags move the rest of the way.
+        assertEquals(ChestBag.LID_CLEARANCE - (3.0F - 2.9F) / 0.6F, spreadOfARebuiltWolf(5.8F), 1.0E-4F);
+        // Narrower torsos need no change. A wide torso must not swallow the open lids.
+        assertEquals(0.0F, spreadOfARebuiltWolf(4.0F));
+        assertEquals((4.5F + ChestBag.LID_CLEARANCE * 0.6F - 3.0F) / 0.6F, spreadOfARebuiltWolf(9.0F), 1.0E-4F);
     }
 }

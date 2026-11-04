@@ -4,8 +4,6 @@ import me.khajiitos.chestedcompanions.common.config.CCConfig;
 import me.khajiitos.chestedcompanions.common.util.ChestEntityCommon;
 import me.khajiitos.chestedcompanions.common.util.IChestEntity;
 import me.khajiitos.chestedcompanions.common.util.PetEnderChestContainer;
-import net.minecraft.SharedConstants;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.TamableAnimal;
@@ -30,7 +28,7 @@ class InventoryTest {
     AtomicReference<IChestEntity.PetChestContainer<?>> current;
 
     @BeforeAll static void bootstrap() {
-        SharedConstants.tryDetectVersion(); Bootstrap.bootStrap();
+        TestBootstrap.run();
     }
 
     @BeforeEach void setup() {

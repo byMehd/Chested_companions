@@ -42,7 +42,16 @@ public class WolfChestLayer extends ChestLayer<WolfRenderState, WolfModel> {
         if (wolfRenderState.isBaby) {
             chestModelPart.x = wolfBody.x;
             chestModelPart.y = wolfBody.y + (wolfRenderState.isSitting ? 1.0f : 0.0f);
+            //? if >=26.1 {
+            /*// Since 26.1 the baby wolf has a body of its own, a 6x4x8 box centred on the part and wider than half the adult one:
+            // the bags move out across the pet until the hinge is flush with the side of the body (5.0 units). The rule that keeps
+            // an open lid off the side of the torso, which runs after this, moves them the hair further that stops the lid from
+            // flickering against the body.
+            chestModelPart.z = wolfBody.z;
+            spread(chestModelPart, 5.0f);
+            *///?} else {
             chestModelPart.z = wolfBody.z - 1.f;
+            //?}
             chestModelPart.xScale = 0.3f;
             chestModelPart.yScale = 0.3f;
             chestModelPart.zScale = 0.3f;

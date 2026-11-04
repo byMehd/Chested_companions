@@ -5,8 +5,6 @@ import com.google.gson.JsonParser;
 import me.khajiitos.chestedcompanions.common.config.CCConfig;
 import me.khajiitos.chestedcompanions.common.config.CCConfigValues;
 import me.khajiitos.chestedcompanions.common.util.InventoryCapacity;
-import net.minecraft.SharedConstants;
-import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,8 +18,7 @@ class ConfigTest {
     @TempDir Path directory;
 
     @BeforeAll static void bootstrap() {
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        TestBootstrap.run();
     }
 
     @BeforeEach void resetValues() throws Exception {

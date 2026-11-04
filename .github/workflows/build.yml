@@ -1,6 +1,6 @@
 name: Build and tests
 
-# Every supported Minecraft version is built and played on every loader. A push to a branch with an open pull request is
+# Every supported Minecraft version is built on every loader; Fabric runs the client and server scenarios. A push to a branch with an open pull request is
 # tested through the pull request only, so it is not tested twice.
 on:
   push:
@@ -9,24 +9,46 @@ on:
   pull_request:
     paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
+    inputs:
+      minecraft:
+        description: Minecraft version to validate (all runs the complete matrix)
+        type: choice
+        default: all
+        options: [all, '1.21.9', '1.21.10', '1.21.11', '26.1.2', '26.2', '26.3']
+      checks:
+        description: Validation stage
+        type: choice
+        default: all
+        options: [all, build, game]
+      loader:
+        description: Loader to build (game scenarios use Fabric)
+        type: choice
+        default: all
+        options: [all, fabric, neoforge, forge]
+      visual:
+        description: Rendering profile (Fat Cat runs only its relevant client scenes)
+        type: choice
+        default: vanilla
+        options: [vanilla, fatcat, freshanimations]
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ github.ref }}-${{ inputs.minecraft || 'all' }}-${{ inputs.checks || 'all' }}-${{ inputs.loader || 'all' }}-${{ inputs.visual || 'vanilla' }}
   cancel-in-progress: true
 
 jobs:
   build:
+    if: inputs.checks != 'game'
     name: ${{ matrix.mc }} ${{ matrix.loader }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9']
-        loader: [fabric, neoforge, forge]
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2", "26.3"]') }}
+        loader: ${{ fromJSON(inputs.loader && inputs.loader != 'all' && format('["{0}"]', inputs.loader) || '["fabric", "neoforge", "forge"]') }}
         profile: [minimum, current]
     steps:
       - uses: actions/checkout@v7
@@ -52,7 +74,7 @@ jobs:
             -Porg.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64 "${overrides[@]}"
           python3 scripts/verify_artifact.py '${{ matrix.loader }}' '${{ matrix.mc }}'
       # More Chest Variants' build for 1.21.9 and 1.21.10 requires NeoForge 21.10.63 or newer, so it cannot load on 1.21.9.
-      - name: Verify NeoForge with More Chest Variants
+      - name: Verify NeoForge with optional integrations
         if: matrix.loader == 'neoforge' && matrix.profile == 'current' && matrix.mc != '1.21.9'
         run: ./gradlew :${{ matrix.mc }}-neoforge:test -PwithOptionalMods --console=plain -Porg.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64
       - name: Start real Forge GameTest server
@@ -62,7 +84,7 @@ jobs:
         if: matrix.profile == 'current'
         uses: actions/upload-artifact@v7
         with:
-          name: Chested-Companions-Revived-1.0.0-mc${{ matrix.mc }}-${{ matrix.loader }}
+          name: Chested-Companions-Revived-1.0.1-mc${{ matrix.mc }}-${{ matrix.loader }}
           path: versions/${{ matrix.mc }}-${{ matrix.loader }}/build/libs/*.jar
           if-no-files-found: error
       - name: Upload test reports
@@ -76,62 +98,76 @@ jobs:
           if-no-files-found: ignore
 
   hidden-client:
-    name: Hidden Fabric ${{ matrix.mc }} ${{ matrix.loader }} / ${{ matrix.optional }}
+    if: inputs.checks != 'build' && (inputs.visual == '' || inputs.visual == 'vanilla')
+    name: Hidden Fabric ${{ matrix.mc }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
+    env:
+      # SDL 3 cannot find a GLX visual under the hosted runner's Xvfb. Use Mesa's EGL path instead.
+      SDL_VIDEO_FORCE_EGL: ${{ matrix.mc == '26.3' && '1' || '0' }}
+      SDL_VIDEODRIVER: x11
+      LIBGL_ALWAYS_SOFTWARE: '1'
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { mc: '1.21.11', loader: '0.17.3', optional: without-optional-mods }
-          - { mc: '1.21.11', loader: '0.20.1', optional: without-optional-mods }
-          - { mc: '1.21.11', loader: '0.20.1', optional: with-optional-mods }
-          - { mc: '1.21.10', loader: '0.17.3', optional: without-optional-mods }
-          - { mc: '1.21.10', loader: '0.20.1', optional: without-optional-mods }
-          - { mc: '1.21.10', loader: '0.20.1', optional: with-optional-mods }
-          - { mc: '1.21.9', loader: '0.17.3', optional: without-optional-mods }
-          - { mc: '1.21.9', loader: '0.20.1', optional: without-optional-mods }
-          - { mc: '1.21.9', loader: '0.20.1', optional: with-optional-mods }
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2", "26.3"]') }}
+        profile: [minimum, current, optional]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          # Minecraft 26 runs on Java 25, 1.21 on Java 21; the jobs below start the game with the JDK they install.
+          java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
+      - name: Install SDL OpenGL runtime
+        if: matrix.mc == '26.3'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libegl1 libegl-mesa0 libgl1-mesa-dri libglx-mesa0 mesa-utils
+          ldconfig -p | grep -E 'lib(EGL|GLX|GL)\.so'
       - name: Start invisible client and verify loading
         shell: bash
         run: |
           chmod +x gradlew
           optional=()
-          if [[ '${{ matrix.optional }}' == with-optional-mods ]]; then optional+=(-PwithOptionalMods); fi
+          if [[ '${{ matrix.profile }}' == optional ]]; then optional+=(-PwithOptionalMods); fi
+          loader=$(sed -n 's/^fabric_loader_version=//p' gradle.properties)
+          if [[ '${{ matrix.profile }}' == minimum ]]; then
+            variant=versions/${{ matrix.mc }}-fabric/gradle.properties
+            loader=
+            if [[ -f "$variant" ]]; then loader=$(sed -n 's/^fabric_loader_minimum=//p' "$variant"); fi
+            if [[ -z "$loader" ]]; then loader=$(sed -n 's/^fabric_loader_minimum=//p' gradle.properties); fi
+          fi
           set -o pipefail
-          xvfb-run -a ./gradlew :${{ matrix.mc }}-fabric:runSmokeClient --console=plain '-Pfabric_loader_version=${{ matrix.loader }}' "${optional[@]}" | tee client-smoke.log
+          xvfb-run -a ./gradlew :${{ matrix.mc }}-fabric:runSmokeClient --console=plain "-Pfabric_loader_version=$loader" "${optional[@]}" | tee client-smoke.log
           grep -q 'REVIVED_CLIENT_SMOKE_PASSED' client-smoke.log
       - name: Upload client diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: hidden-client-${{ matrix.mc }}-${{ matrix.loader }}-${{ matrix.optional }}
+          name: hidden-client-${{ matrix.mc }}-${{ matrix.profile }}
           path: |
             client-smoke.log
             run/smoke-fabric/logs/
           if-no-files-found: ignore
 
   server-scenarios:
+    if: inputs.checks != 'build' && (inputs.visual == '' || inputs.visual == 'vanilla')
     name: Real server scenarios (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9']
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2", "26.3"]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          # Minecraft 26 runs on Java 25 (see the hidden client job).
+          java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
       - name: Play the gameplay scenarios on a dedicated server
         shell: bash
@@ -152,50 +188,76 @@ jobs:
           if-no-files-found: ignore
 
   client-screenshots:
+    if: inputs.checks != 'build'
     name: Real client rendering (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
+    env:
+      SCREENS_DIR: ${{ inputs.visual && inputs.visual != 'vanilla' && format('{0}-{1}', inputs.visual, matrix.mc) || 'smoke-screens' }}
+      SDL_VIDEO_FORCE_EGL: ${{ matrix.mc == '26.3' && '1' || '0' }}
+      SDL_VIDEODRIVER: x11
+      LIBGL_ALWAYS_SOFTWARE: '1'
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        mc: ['1.21.11', '1.21.10', '1.21.9']
+        mc: ${{ fromJSON(inputs.minecraft && inputs.minecraft != 'all' && format('["{0}"]', inputs.minecraft) || '["1.21.11", "1.21.10", "1.21.9", "26.1.2", "26.2", "26.3"]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          # Minecraft 26 runs on Java 25 (see the hidden client job).
+          java-version: ${{ startsWith(matrix.mc, '26.') && '25' || '21' }}
       - uses: gradle/actions/setup-gradle@v6
+      - name: Install SDL OpenGL runtime
+        if: matrix.mc == '26.3'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libegl1 libegl-mesa0 libgl1-mesa-dri libglx-mesa0 mesa-utils
+          ldconfig -p | grep -E 'lib(EGL|GLX|GL)\.so'
+      - name: Prepare model pack with Entity Model Features and Entity Texture Features
+        if: inputs.visual && inputs.visual != 'vanilla'
+        run: python3 scripts/prepare_fatcat_test.py '${{ matrix.mc }}' '${{ inputs.visual }}'
       - name: Photograph every chest type on a cat and a wolf, sitting and baby pets, a golem visit and the remove-chest button
         shell: bash
         run: |
           chmod +x gradlew
           set -o pipefail
           echo "Runner: $(nproc) CPUs, $(free -m | awk '/Mem:/ {print $2}') MB RAM, load $(cut -d' ' -f1-3 /proc/loadavg)"
-          # On 2 November 2026 GitHub's shared runners stopped loading this software-rendered client's world in time
-          # ("Timeout loading world"), for every commit including one that had passed that morning, while the scenarios
-          # pass on a real machine. That alone only raises a warning; any other failure still fails the job.
+          # Completed scenarios require every image. Only vanilla world-loading timeouts have a documented GPU fallback.
+          arguments=(-PwithGameTest)
+          if [[ '${{ inputs.visual }}' == fatcat ]]; then
+            arguments+=("-PvisualPack=${{ inputs.visual }}" "-PscreensDir=$SCREENS_DIR" -PscreensOnly=cats,sitting,baby,geometry)
+          elif [[ '${{ inputs.visual }}' == freshanimations ]]; then
+            arguments+=("-PvisualPack=${{ inputs.visual }}" "-PscreensDir=$SCREENS_DIR" -PscreensOnly=cats,wolves,sitting,baby,geometry)
+          fi
           played=
+          only_world_timeouts=yes
           for attempt in 1 2; do
-            rm -rf run/smoke-screens/screenshots
-            if xvfb-run -a ./gradlew :${{ matrix.mc }}-fabric:runSmokeScreens -PwithGameTest --console=plain | tee -a screenshots.log; then played=yes; break; fi
+            rm -rf "run/$SCREENS_DIR/screenshots"
+            if xvfb-run -a ./gradlew :${{ matrix.mc }}-fabric:runSmokeScreens "${arguments[@]}" --console=plain 2>&1 | tee "screenshots-attempt-$attempt.log" | tee -a screenshots.log; then played=yes; break; fi
+            if ! grep -q 'java.lang.AssertionError: Timeout loading world' "screenshots-attempt-$attempt.log"; then only_world_timeouts=; fi
             echo "Attempt $attempt failed"
           done
           if [ -z "$played" ]; then
-            if grep -q "Timeout loading world" screenshots.log && ! grep -q "REVIVED_CLIENT_SCREENSHOTS_FAILED" screenshots.log; then
-              echo "::warning title=Real client scenarios not played::The runner could not load the world in time (Timeout loading world)."
+            if [[ -z '${{ inputs.visual }}' || '${{ inputs.visual }}' == vanilla ]] && [[ "$only_world_timeouts" == yes ]]; then
+              echo "::warning title=Vanilla client world could not load::Both attempts timed out before joining the world on this software renderer. No visual pass is claimed; see docs/VALIDATION.md for GPU verification."
               exit 0
             fi
             exit 1
           fi
-          test "$(ls run/smoke-screens/screenshots/*.png | wc -l)" -eq 61
+          if [[ '${{ inputs.visual }}' != vanilla && -n '${{ inputs.visual }}' ]]; then
+            python3 scripts/check_modelpack_geometry.py screenshots.log
+          fi
+          expected=${{ inputs.visual == 'fatcat' && '38' || inputs.visual == 'freshanimations' && '62' || '67' }}
+          test "$(find "run/$SCREENS_DIR/screenshots" -maxdepth 1 -name '*.png' | wc -l)" -eq "$expected"
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: client-screenshots-${{ matrix.mc }}
+          name: client-screenshots-${{ matrix.mc }}${{ inputs.visual && inputs.visual != 'vanilla' && format('-{0}', inputs.visual) || '' }}
           path: |
-            run/smoke-screens/screenshots/
-            run/smoke-screens/logs/
+            run/${{ env.SCREENS_DIR }}/screenshots/
+            run/${{ env.SCREENS_DIR }}/logs/
             screenshots.log
           if-no-files-found: ignore

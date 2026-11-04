@@ -1,10 +1,8 @@
 package me.khajiitos.chestedcompanions.common;
 
 import me.khajiitos.chestedcompanions.common.util.PetCopperChest;
-import net.minecraft.SharedConstants;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Abilities;
@@ -23,10 +21,41 @@ import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+//? if neoforge && >=26.3 {
+/*@org.junit.jupiter.api.extension.ExtendWith(net.neoforged.testframework.junit.EphemeralTestServerProvider.class)
+*///?}
 class PetCopperChestTest {
     static {
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        TestBootstrap.run();
+    }
+
+    //? if neoforge && >=26.3 {
+    /*// NeoForge 26.3 reads copper transitions from data maps loaded with the server's resources.
+    @org.junit.jupiter.api.BeforeAll
+    static void loadCopperDataMaps(net.minecraft.server.MinecraftServer server) {
+    }
+    *///?}
+
+    private static ItemStack axe(Item item) {
+        ItemStack stack = new ItemStack(item);
+        //? if >=26.3 {
+        /*// AxeItem was removed. Supply the vanilla axe tag when using standalone unit registries.
+        // A NeoForge test server already loads the full tag set from its resources.
+        if (!stack.is(net.minecraft.tags.ItemTags.AXES)) {
+            try {
+                var holder = item.builtInRegistryHolder();
+                var tags = new java.util.HashSet<>(holder.tags().toList());
+                tags.add(net.minecraft.tags.ItemTags.AXES);
+                var bindTags = net.minecraft.core.Holder.Reference.class
+                        .getDeclaredMethod("bindTags", java.util.Collection.class);
+                bindTags.setAccessible(true);
+                bindTags.invoke(holder, tags);
+            } catch (ReflectiveOperationException exception) {
+                throw new AssertionError("Cannot initialize the standalone axe fixture", exception);
+            }
+        }
+        *///?}
+        return stack;
     }
 
     private static final List<Item> UNWAXED = List.of(Items.COPPER_CHEST, Items.EXPOSED_COPPER_CHEST,
@@ -134,7 +163,7 @@ class PetCopperChestTest {
         PetFixture fixture = new PetFixture(new ItemStack(Items.OXIDIZED_COPPER_CHEST), 9);
         Player player = player(false);
         when(player.level()).thenReturn(fixture.level);
-        ItemStack axe = new ItemStack(Items.IRON_AXE);
+        ItemStack axe = axe(Items.IRON_AXE);
         assertTrue(PetCopperChest.tryUse(fixture.pet, player, net.minecraft.world.InteractionHand.MAIN_HAND, axe));
         assertTrue(fixture.chest.get().is(Items.WEATHERED_COPPER_CHEST));
         verify(fixture.level).playSound(isNull(), eq(fixture.pet), eq(SoundEvents.AXE_SCRAPE), any(), anyFloat(), anyFloat());
@@ -150,7 +179,7 @@ class PetCopperChestTest {
 
     @Test void axeOnAPristineUnwaxedChestDoesNothing() {
         PetFixture fixture = new PetFixture(new ItemStack(Items.COPPER_CHEST), 9);
-        ItemStack axe = new ItemStack(Items.DIAMOND_AXE);
+        ItemStack axe = axe(Items.DIAMOND_AXE);
         assertFalse(PetCopperChest.tryUse(fixture.pet, player(false), net.minecraft.world.InteractionHand.MAIN_HAND, axe));
         assertTrue(fixture.chest.get().is(Items.COPPER_CHEST));
         assertEquals(0, axe.getDamageValue());

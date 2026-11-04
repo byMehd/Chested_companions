@@ -1,9 +1,14 @@
 .gradle/
 **/build/
 run/
+__pycache__/
 tools/
 research/
 upstream/
 .idea/
 *.iml
 *.log
+
+# Local coding-agent worktrees and session files
+.claude/
+.codex/

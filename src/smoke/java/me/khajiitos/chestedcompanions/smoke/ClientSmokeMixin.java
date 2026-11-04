@@ -6,11 +6,18 @@ import me.khajiitos.chestedcompanions.common.util.IChestEntityRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.CatRenderState;
 import net.minecraft.client.renderer.entity.state.WolfRenderState;
+//? if >=26.3 {
+/*import org.lwjgl.sdl.SDLVideo;
+*///?} else {
 import org.lwjgl.glfw.GLFW;
+//?}
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+//? if >=26.2 && <26.3 {
+/*import org.spongepowered.asm.mixin.injection.Redirect;
+*///?}
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
@@ -18,12 +25,23 @@ public class ClientSmokeMixin {
     @Unique private int revived$ticks;
     @Unique private boolean revived$finished;
 
+    //? if >=26.2 && <26.3 {
+    /*// 26.2 explicitly shows its initially hidden GLFW window after the renderer is ready.
+    @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwShowWindow(J)V"), remap = false)
+    private void revived$keepWindowHidden(long handle) {
+    }
+    *///?}
+
     @Inject(method = "tick", at = @At("TAIL"))
     private void checkClient(CallbackInfo ci) {
         Minecraft client = (Minecraft)(Object)this;
         if (revived$finished || !Boolean.getBoolean("revived.smoke") || client.getOverlay() != null || client.screen == null) return;
         if (++revived$ticks < 40) return;
+        //? if >=26.3 {
+        /*if ((SDLVideo.SDL_GetWindowFlags(client.getWindow().handle()) & SDLVideo.SDL_WINDOW_HIDDEN) == 0)
+        *///?} else {
         if (GLFW.glfwGetWindowAttrib(client.getWindow().handle(), GLFW.GLFW_VISIBLE) != GLFW.GLFW_FALSE)
+        //?}
             throw new AssertionError("Smoke-test client must remain hidden");
         if (!((Object)new CatRenderState() instanceof IChestEntityRenderState)
                 || !((Object)new WolfRenderState() instanceof IChestEntityRenderState))
