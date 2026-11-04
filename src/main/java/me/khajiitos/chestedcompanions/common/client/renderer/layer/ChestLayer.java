@@ -117,7 +117,7 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
         float hinge = (bag.hingeDistance() + chestModelPart.getChild("left_body").z) * scale;
         // The two planes are the same distance from the middle of the chest part: the nearer one to the torso counts.
         float plane = hinge - Math.abs(chestModelPart.x - torso.x());
-        spread(chestModelPart, ChestBag.spreadToClear(plane, torso.halfWidth(), scale));
+        spread(chestModelPart, ChestBag.spreadToClear(plane, torso.surfaceHalfWidth(), scale));
     }
 
     @Override

@@ -171,10 +171,14 @@ class ChestBagTest {
         assertEquals(0.0F, ChestBag.spreadToClear(1.8F, 1.6F, 0.6F), "the vanilla cat, bags 0.2 outside its drawn torso");
         assertEquals(0.0F, ChestBag.spreadToClear(0.9F, 0.8F, 0.3F), "the vanilla kitten");
         assertEquals(0.0F, ChestBag.spreadToClear(4.0F, 3.0F, 0.6F), "a bag that floats well away from the pet");
-        assertEquals(0.0F, ChestBag.spreadToClear(2.0F, 3.0F, 0.6F), "a bag buried in a wide torso, its open lid hidden");
-        // The cat layer hangs the bags of a rebuilt cat 0.2 * size inside the side of the torso, with the bags at 0.6 * size.
-        for (float size : new float[]{0.25F, 0.5F, 1.0F, 2.0F, 4.0F}) {
-            assertEquals(0.0F, ChestBag.spreadToClear(5.0F * size - 0.2F * size, 5.0F * size, 0.6F * size), "size " + size);
+    }
+
+    @Test void aBuriedLidIsMovedOutsideInsteadOfRemainingHiddenInThePet() {
+        for (float scale : new float[]{0.15F, 0.3F, 0.6F, 1.2F}) {
+            float plane = 2.0F * scale;
+            float torso = 3.0F * scale;
+            float moved = plane + ChestBag.spreadToClear(plane, torso, scale) * scale;
+            assertEquals(torso + ChestBag.LID_CLEARANCE * scale, moved, 1.0E-4F);
         }
     }
 
@@ -185,9 +189,9 @@ class ChestBagTest {
                 for (float plane = halfWidth - 3.0F * gap; plane < halfWidth + 3.0F * gap; plane += gap / 8.0F) {
                     String what = "scale " + scale + ", torso " + halfWidth + ", plane " + plane;
                     float moved = plane + ChestBag.spreadToClear(plane, halfWidth, scale) * scale;
-                    assertTrue(Math.abs(moved - halfWidth) >= gap - 1.0E-4F, "still too close: " + what);
+                    assertTrue(moved - halfWidth >= gap - 1.0E-4F, "still too close: " + what);
                     assertTrue(moved >= plane, "the bags only ever move apart: " + what);
-                    assertTrue(moved - plane <= 2.0F * gap + 1.0E-4F, "and never by more than twice the clearance: " + what);
+                    assertTrue(moved <= Math.max(plane, halfWidth + gap) + 1.0E-4F, "only the minimum displacement is applied: " + what);
                 }
             }
         }

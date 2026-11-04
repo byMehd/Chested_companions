@@ -62,6 +62,7 @@ class PetTorsoTest {
         assertEquals(1.0F, torso.z(), 1.0E-4F);
         assertEquals(16.0F, torso.length(), 1.0E-4F);
         assertEquals(2.0F, torso.halfWidth(), 1.0E-4F);
+        assertEquals(1.6F, torso.surfaceHalfWidth(), 1.0E-4F);
         // The chest part of the vanilla layout (body + 2 down) is the same point as the one measured from the torso.
         assertEquals(body.y + 2.0F, torso.y() - 3.0F, 1.0E-4F);
         assertEquals(body.z, torso.z() - 11.0F, 1.0E-4F);
@@ -179,6 +180,15 @@ class PetTorsoTest {
         assertEquals(14.0F, PetTorso.find(root).length(), 1.0E-4F);
     }
 
+    @Test void aFreshAnimationsManeIsNotTakenForTheWolfTorso() {
+        ModelPart mane = part(0, -2, -3, 0, List.of(cube(-4, -3, -3.5F, 8, 6, 7)), Map.of());
+        ModelPart torso = part(0, 0, 0, 0, List.of(cube(-3, -4.5F, -3, 6, 9, 6)), Map.of("EMF_mane2", mane));
+        PetTorso found = PetTorso.find(torso);
+        assertNotNull(found);
+        assertEquals(3.0F, found.surfaceHalfWidth(), 1.0E-4F);
+        assertEquals(9.0F, found.length(), 1.0E-4F);
+    }
+
     @Test void theVanillaWolfTorsoIsItsBodyPartAndNotItsMane() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
@@ -227,8 +237,8 @@ class PetTorsoTest {
         assertEquals(ChestBag.LID_CLEARANCE, spreadOfARebuiltWolf(6.0F), 1.0E-4F);
         // Slightly narrower: the plane is 0.1 outside the torso, which is still too close, so the bags move the rest of the way.
         assertEquals(ChestBag.LID_CLEARANCE - (3.0F - 2.9F) / 0.6F, spreadOfARebuiltWolf(5.8F), 1.0E-4F);
-        // Narrower or much wider ones leave the bags where they are, floating clear of the torso or burying their lids in it.
+        // Narrower torsos need no change. A wide torso must not swallow the open lids.
         assertEquals(0.0F, spreadOfARebuiltWolf(4.0F));
-        assertEquals(0.0F, spreadOfARebuiltWolf(9.0F));
+        assertEquals((4.5F + ChestBag.LID_CLEARANCE * 0.6F - 3.0F) / 0.6F, spreadOfARebuiltWolf(9.0F), 1.0E-4F);
     }
 }

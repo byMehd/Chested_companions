@@ -115,8 +115,8 @@ class BabyPlacementTest {
         float rightPlane = across.get("right_lid")[0];
         assertEquals(leftPlane, across.get("left_body")[0], 1.0E-3F, "the closed bag starts at its hinge");
         assertEquals(rightPlane, across.get("right_body")[1], 1.0E-3F);
-        float leftGap = leftPlane - (torso.x() + torso.halfWidth());
-        float rightGap = (torso.x() - torso.halfWidth()) - rightPlane;
+        float leftGap = leftPlane - (torso.x() + torso.surfaceHalfWidth());
+        float rightGap = (torso.x() - torso.surfaceHalfWidth()) - rightPlane;
         // Outside the torso, so that the lid shows, but only a hair: the bags hang on the pet, not beside it.
         assertTrue(leftGap > 0.0F && leftGap < 0.15F, "left lid plane is " + leftGap + " outside the torso");
         assertTrue(rightGap > 0.0F && rightGap < 0.15F, "right lid plane is " + rightGap + " outside the torso");
