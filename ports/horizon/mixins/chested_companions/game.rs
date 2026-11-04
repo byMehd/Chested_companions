@@ -142,7 +142,7 @@ fn uuid(words: [i32; 4]) -> u128 {
         .fold(0, |a, word| (a << 32) | u128::from(word as u32))
 }
 
-pub fn configuration() -> Config {
+fn load_configuration() -> Config {
     let mut config = Config::default();
     let Ok(dir) = Game::native_config_dir() else {
         return config;
@@ -184,6 +184,24 @@ pub fn configuration() -> Config {
     config.cat_rows = rows("catInventoryCapacity");
     config.wolf_rows = rows("wolfInventoryCapacity");
     config
+}
+
+thread_local! {
+    static CONFIG: std::cell::RefCell<Option<(std::time::Instant, Config)>> = const { std::cell::RefCell::new(None) };
+}
+
+pub fn configuration() -> Config {
+    CONFIG.with(|cached| {
+        let mut cached = cached.borrow_mut();
+        if let Some((time, config)) = cached.as_ref()
+            && time.elapsed() < std::time::Duration::from_secs(1)
+        {
+            return config.clone();
+        }
+        let config = load_configuration();
+        *cached = Some((std::time::Instant::now(), config.clone()));
+        config
+    })
 }
 
 impl Game<'_> {
@@ -430,6 +448,33 @@ impl Game<'_> {
             return;
         };
         if visual.chest != chest || visual.open != open {
+            if visual.open != open
+                && let Some(chest) = chest.or(visual.chest)
+                && let Some(mob) = self.mobs.iter().find(|m| m.id == id)
+            {
+                let prefix = match chest {
+                    Chest::Wood => "chest",
+                    Chest::Ender => "ender_chest",
+                    Chest::Copper {
+                        stage: runtime::Oxidation::Weathered,
+                        ..
+                    } => "copper_chest_weathered",
+                    Chest::Copper {
+                        stage: runtime::Oxidation::Oxidized,
+                        ..
+                    } => "copper_chest_oxidized",
+                    Chest::Copper { .. } => "copper_chest",
+                };
+                self.audio.play(
+                    &format!(
+                        "minecraft:block.{prefix}.{}",
+                        if open { "open" } else { "close" }
+                    ),
+                    Some(mob.center()),
+                    0.5,
+                    0.95,
+                );
+            }
             visual.from = visual.openness(now as f64);
             visual.chest = chest;
             visual.open = open;
@@ -594,15 +639,16 @@ impl Game<'_> {
             return;
         };
         let rows = configuration().rows(pet, bag.chest);
-        for overflow in bag.resize(rows) {
-            self.cc_drop(id, overflow);
-        }
+        let overflow = bag.resize(rows);
         let chest = bag.chest;
         if BAG
-            .set(self, Holder::Entity(id), Some(bag.clone()))
+            .set(self.cc_host(), Holder::Entity(id), Some(bag.clone()))
             .is_err()
         {
             return;
+        }
+        for stack in overflow {
+            self.cc_drop(id, stack);
         }
         let key = (
             if chest == Chest::Ender {
@@ -805,5 +851,80 @@ fn draw_bag_box(
             uv[3] * 16.0 / 11.0,
         ];
         game.native_draw_quad(draw, sprite, corners, uv, 0xFFFFFF);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bag_codec_keeps_slot_numbers_and_item_components() {
+        let chest = item_from_nbt(&Tag::compound([
+            ("id", Tag::String("minecraft:chest".into())),
+            ("count", Tag::Int(1)),
+            (
+                "components",
+                Tag::compound([(
+                    "minecraft:custom_data",
+                    Tag::compound([("owner_note", Tag::String("test".into()))]),
+                )]),
+            ),
+        ]))
+        .unwrap();
+        let mut bag = Bag::new(Chest::Wood, chest.clone(), 3);
+        let mut sword = ItemStack {
+            item: "minecraft:diamond_sword".into(),
+            count: 1,
+            damage: 53,
+            extra: None,
+        };
+        bag.slots_mut()[26] = Some(sword.clone());
+        let saved = encode_bag(&Some(bag)).unwrap();
+        let loaded = decode_bag(&saved).unwrap().unwrap();
+        assert_eq!(loaded.equipped, chest);
+        assert_eq!(loaded.slots().len(), 27);
+        assert!(loaded.slots()[0].is_none());
+        assert_eq!(loaded.slots()[26], Some(sword.clone()));
+        sword.damage = 54;
+        assert_ne!(loaded.slots()[26], Some(sword));
+    }
+
+    #[test]
+    fn ender_codec_cannot_save_a_players_contents_on_a_pet() {
+        let chest = ItemStack {
+            item: "minecraft:ender_chest".into(),
+            count: 1,
+            damage: 0,
+            extra: None,
+        };
+        let saved = encode_bag(&Some(Bag::new(Chest::Ender, chest, 3))).unwrap();
+        assert_eq!(saved.get(&"size".into()), Some(&Tag::Int(0)));
+        assert!(!saved.contains_key(&"CCItems".into()));
+        assert!(decode_bag(&saved).unwrap().unwrap().slots().is_empty());
+    }
+
+    #[test]
+    fn unknown_saved_schema_fails_instead_of_replacing_an_inventory() {
+        let saved = [("schema".into(), Tag::Int(2))].into();
+        assert!(matches!(decode_bag(&saved), Err(AttachmentError::Decode)));
+    }
+
+    #[test]
+    fn visual_codec_preserves_float_bits_and_rejects_nan() {
+        let codec = VISUAL.codec.as_ref().unwrap();
+        let mut saved = (codec.encode)(&Visual {
+            chest: Some(Chest::Ender),
+            open: true,
+            changed: 100,
+            from: 0.375,
+        })
+        .unwrap();
+        let loaded = (codec.decode)(&saved).unwrap();
+        assert_eq!(loaded.from, 0.375);
+        assert_eq!(loaded.chest, Some(Chest::Ender));
+        assert_eq!(loaded.openness(102.5), 0.625);
+        saved.insert("from".into(), Tag::Float(f32::NAN.to_bits()));
+        assert_eq!((codec.decode)(&saved).unwrap().from, 0.0);
     }
 }

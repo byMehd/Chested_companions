@@ -116,7 +116,7 @@ pub(super) fn try_start(
         || held(mob).is_some()
         || mob.extra.leash.is_some()
         || mob.extra.mount.is_some()
-        || mem_ref(mob).is_panicking.present()
+        || mem_ref(mob).is_some_and(|m| m.is_panicking.present())
     {
         return None;
     }
@@ -168,7 +168,7 @@ pub(super) fn tick(transport: &mut Transport, mob: &mut Mob, cx: &mut Bx<'_, '_>
     let eligible = held(mob).is_none()
         && mob.extra.leash.is_none()
         && mob.extra.mount.is_none()
-        && !mem_ref(mob).is_panicking.present()
+        && !mem_ref(mob).is_some_and(|m| m.is_panicking.present())
         && transport.target.is_none();
     if !eligible {
         close(mob, cx, &mut task);
