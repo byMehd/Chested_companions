@@ -8,6 +8,10 @@ This port is under development. It is not a release and is not yet ready for
 player worlds. Passing the runtime tests alone does not establish that the
 complete mod builds or works in Horizon.
 
+The native `.hnmod` bundle embeds this mod's MIT textures, models and
+translations. They load beneath selected resource packs, so players do not
+need a separate asset pack and texture overrides keep their usual priority.
+
 ## Scope
 
 Cats and wolves, wooden chests, all eight copper chest states, the player's

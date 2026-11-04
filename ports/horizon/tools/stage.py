@@ -53,9 +53,12 @@ def stage(horizon, mixins):
     common = ["--workspace", original, "--mods", ROOT / "mixins"]
     plan = run(executable, "plan", *common, "--out", target / "plan.json", text=True)
     (target / "plan-report.json").write_text(plan)
-    if (target / "game").exists():
-        shutil.rmtree(target / "game")
-    result = run(executable, "apply", *common, "--out", target / "game", text=True)
+    generated = target / "game"
+    if generated.exists():
+        if generated.is_symlink() or generated.resolve().parent != target.resolve():
+            raise ValueError("generated game must stay inside this port's target directory")
+        shutil.rmtree(generated)
+    result = run(executable, "apply", *common, "--out", generated, text=True)
     (target / "stage-report.json").write_text(result)
     print(json.dumps({"game": "26.3", "revision": pin, "stage": str(target / "game")}))
 
