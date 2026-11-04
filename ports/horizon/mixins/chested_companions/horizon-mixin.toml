@@ -15,16 +15,13 @@ source = "assets.rs"
 [[injection]]
 id = "assets-hook"
 target = "horizon_client::game::packs::startup_root"
-kind = "WRAP_OPERATION"
-selector = "packs::resource_root"
-require = 1
-ordinal = 0
+kind = "HEAD"
+cancellable = true
 helper = "assets-hook.rs"
 bindings = [
-  { name = "base", ty = "&Path", value = "$arg0" },
-  { name = "enabled", ty = "&[Pack]", value = "$arg1" },
-  { name = "cache", ty = "&Path", value = "$arg2" },
-  { name = "original", ty = "impl FnOnce(&Path, &[Pack], &Path) -> std::io::Result<PathBuf>", value = "$operation" },
+  { name = "vanilla", ty = "&Path", value = "vanilla" },
+  { name = "selected", ty = "&[String]", value = "selected" },
+  { name = "server", ty = "&[Pack]", value = "server" },
 ]
 
 [[module]]

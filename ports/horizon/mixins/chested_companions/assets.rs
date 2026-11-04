@@ -5,6 +5,21 @@ use horizon_mods::{Content, Package};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
+// Pack ordering follows Horizon's game/packs.rs::startup_root, MIT,
+// Copyright (c) 2026 Ludovic Marie. The only extra layer is our owned base assets.
+pub fn startup(
+    vanilla: &Path,
+    selected: &[String],
+    server: &[horizon_client::packs::Pack],
+) -> std::io::Result<PathBuf> {
+    use crate::game::packs::{cache_dir, packs_dir};
+    use horizon_client::packs;
+    let all = packs::discover(vanilla, &packs_dir());
+    let mut enabled = packs::enabled(&all, selected);
+    enabled.extend_from_slice(server);
+    packs::resource_root(&attach(vanilla.to_owned()), &enabled, &cache_dir())
+}
+
 const FILES: &[(&str, &[u8])] = &[
     (
         "horizon-mod.toml",
