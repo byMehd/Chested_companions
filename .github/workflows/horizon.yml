@@ -74,7 +74,7 @@ jobs:
       - name: Validate the native source and asset package
         run: |
           python3 ports/horizon/tools/package.py
-          cargo run --locked --manifest-path ports/horizon/target/game/Cargo.toml -p cargo-horizon-mod --target-dir ports/horizon/target/native-cargo -- check ports/horizon/target/chested_companions-1.0.1+26.3.hnmod --kind native-mod --json
+          cargo run --locked --manifest-path ports/horizon/target/game/Cargo.toml -p cargo-horizon-mod --target-dir ports/horizon/target/native-cargo -- check ports/horizon/target/chested_companions-1.0.1+26.3.hmod --kind native-mod --json
       - uses: actions/upload-artifact@v6
         if: always()
         with:
@@ -83,7 +83,7 @@ jobs:
             ports/horizon/target/plan.json
             ports/horizon/target/plan-report.json
             ports/horizon/target/stage-report.json
-            ports/horizon/target/chested_companions-1.0.1+26.3.hnmod
+            ports/horizon/target/chested_companions-1.0.1+26.3.hmod
 
   windows:
     needs: [runtime, native]

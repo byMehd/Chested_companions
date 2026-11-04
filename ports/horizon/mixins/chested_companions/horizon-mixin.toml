@@ -7,19 +7,6 @@ priority = 100
 horizon_revision = "67dad0d1a5adca139b426c8114e74a33b376ba64"
 
 [[module]]
-id = "assets"
-file = "crates/horizon-client/src/game/mods.rs"
-name = "chested_companions_assets"
-source = "assets.rs"
-
-[[injection]]
-id = "assets-hook"
-target = "horizon_client::game::mods::content_root"
-kind = "RETURN"
-helper = "assets-hook.rs"
-bindings = [{ name = "value", ty = "std::path::PathBuf", value = "$value" }]
-
-[[module]]
 id = "registration"
 file = "crates/horizon-client/src/entry.rs"
 name = "chested_companions"
