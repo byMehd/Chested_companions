@@ -8,7 +8,7 @@ horizon_revision = "67dad0d1a5adca139b426c8114e74a33b376ba64"
 
 [[module]]
 id = "registration"
-file = "crates/horizon-client/src/mod_api.rs"
+file = "crates/horizon-client/src/entry.rs"
 name = "chested_companions"
 source = "registration.rs"
 

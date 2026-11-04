@@ -24,6 +24,7 @@ pub struct PetChest {
 
 #[derive(Clone, Default)]
 struct Task {
+    updated: i64,
     target: Option<u128>,
     visit: Visit,
     next_search: i64,
@@ -35,33 +36,61 @@ struct Task {
 
 #[derive(Default)]
 struct Level {
+    epoch: u64,
     pets: Vec<PetChest>,
     tasks: BTreeMap<u32, Task>,
 }
 
-static LEVELS: OnceLock<Mutex<BTreeMap<usize, Level>>> = OnceLock::new();
+type LevelKey = (usize, u8);
+static LEVELS: OnceLock<Mutex<BTreeMap<LevelKey, Level>>> = OnceLock::new();
 
-fn levels() -> &'static Mutex<BTreeMap<usize, Level>> {
+fn levels() -> &'static Mutex<BTreeMap<LevelKey, Level>> {
     LEVELS.get_or_init(Default::default)
 }
-fn key(world: &World) -> usize {
-    world as *const World as usize
+fn key(world: &World, dimension: &str) -> LevelKey {
+    (
+        world as *const World as usize,
+        match dimension {
+            "minecraft:the_nether" => 1,
+            "minecraft:the_end" => 2,
+            _ => 0,
+        },
+    )
 }
 
-pub fn publish(world: &World, pets: Vec<PetChest>, golems: &[u32]) {
+fn brain_key(cx: &Bx<'_, '_>) -> LevelKey {
+    key(
+        cx.w.world,
+        if cx.w.nether {
+            "minecraft:the_nether"
+        } else if cx.w.end {
+            "minecraft:the_end"
+        } else {
+            "minecraft:overworld"
+        },
+    )
+}
+
+pub fn publish(world: &World, dimension: &str, epoch: u64, pets: Vec<PetChest>, golems: &[u32]) {
     let mut levels = levels().lock().unwrap_or_else(|e| e.into_inner());
     // Only transient snapshots; bounded even if many worlds open in one process.
     if levels.len() > 16 {
         levels.clear();
     }
-    let level = levels.entry(key(world)).or_default();
+    let level = levels.entry(key(world, dimension)).or_default();
+    if level.epoch != epoch {
+        *level = Level {
+            epoch,
+            ..Default::default()
+        };
+    }
     level.pets = pets;
     level.tasks.retain(|id, _| golems.contains(id));
 }
 
-pub fn open_golems(world: &World, pet: u32) -> Vec<u32> {
+pub fn open_golems(world: &World, dimension: &str, pet: u32) -> Vec<u32> {
     let levels = levels().lock().unwrap_or_else(|e| e.into_inner());
-    let Some(level) = levels.get(&key(world)) else {
+    let Some(level) = levels.get(&key(world, dimension)) else {
         return Vec::new();
     };
     let Some(pet) = level.pets.iter().find(|p| p.id == pet) else {
@@ -70,23 +99,26 @@ pub fn open_golems(world: &World, pet: u32) -> Vec<u32> {
     level
         .tasks
         .iter()
-        .filter(|(_, t)| t.target == Some(pet.uuid) && t.visit.is_open())
+        .filter(|(_, t)| {
+            t.target == Some(pet.uuid)
+                && t.visit.is_open()
+                && world.game_time <= t.updated.saturating_add(10)
+        })
         .map(|(id, _)| *id)
         .collect()
 }
 
-pub fn freezes(world: &World, pet: u32) -> bool {
+pub fn freezes(world: &World, dimension: &str, pet: u32) -> bool {
     let levels = levels().lock().unwrap_or_else(|e| e.into_inner());
-    let Some(level) = levels.get(&key(world)) else {
+    let Some(level) = levels.get(&key(world, dimension)) else {
         return false;
     };
     let Some(pet) = level.pets.iter().find(|p| p.id == pet) else {
         return false;
     };
-    level
-        .tasks
-        .values()
-        .any(|t| t.target == Some(pet.uuid) && t.freeze)
+    level.tasks.values().any(|t| {
+        t.target == Some(pet.uuid) && t.freeze && world.game_time <= t.updated.saturating_add(10)
+    })
 }
 
 fn distance(mob: &Mob, pet: &PetChest) -> f64 {
@@ -121,7 +153,7 @@ pub(super) fn try_start(
         return None;
     }
     let levels = levels().lock().unwrap_or_else(|e| e.into_inner());
-    let level = levels.get(&key(cx.w.world))?;
+    let level = levels.get(&brain_key(cx))?;
     let empty = Task::default();
     let task = level.tasks.get(&mob.id).unwrap_or(&empty);
     if cx.now < task.next_search || candidate(mob, &level.pets, task, cx.now).is_none() {
@@ -154,7 +186,7 @@ fn walk(mob: &mut Mob, pet: &PetChest) {
 }
 
 pub(super) fn tick(transport: &mut Transport, mob: &mut Mob, cx: &mut Bx<'_, '_>) -> bool {
-    let world_key = key(cx.w.world);
+    let world_key = brain_key(cx);
     let (pets, mut task) = {
         let mut levels = levels().lock().unwrap_or_else(|e| e.into_inner());
         let Some(level) = levels.get_mut(&world_key) else {
@@ -165,13 +197,16 @@ pub(super) fn tick(transport: &mut Transport, mob: &mut Mob, cx: &mut Bx<'_, '_>
             level.tasks.remove(&mob.id).unwrap_or_default(),
         )
     };
+    task.updated = cx.now;
     let eligible = held(mob).is_none()
         && mob.extra.leash.is_none()
         && mob.extra.mount.is_none()
         && !mem_ref(mob).is_some_and(|m| m.is_panicking.present())
         && transport.target.is_none();
     if !eligible {
-        close(mob, cx, &mut task);
+        if task.target.is_some() || task.opened_key.is_some() {
+            close(mob, cx, &mut task);
+        }
         task.target = None;
         task.freeze = false;
         save(world_key, mob.id, task);
@@ -271,7 +306,7 @@ pub(super) fn tick(transport: &mut Transport, mob: &mut Mob, cx: &mut Bx<'_, '_>
     true
 }
 
-fn save(world: usize, mob: u32, task: Task) {
+fn save(world: LevelKey, mob: u32, task: Task) {
     levels()
         .lock()
         .unwrap_or_else(|e| e.into_inner())

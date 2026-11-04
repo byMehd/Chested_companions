@@ -268,6 +268,8 @@ impl Game<'_> {
             .collect();
         horizon_client::mobs::transport_items::chested_companions::publish(
             &self.world,
+            self.dim.id(),
+            self.native_lifecycle.epoch().map_or(0, |e| e.get()),
             pets,
             &golems,
         );
@@ -295,13 +297,19 @@ impl Game<'_> {
         for player in self.cc_players(id) {
             openers.open_player(player);
         }
-        for golem in
-            horizon_client::mobs::transport_items::chested_companions::open_golems(&self.world, id)
-        {
+        for golem in horizon_client::mobs::transport_items::chested_companions::open_golems(
+            &self.world,
+            self.dim.id(),
+            id,
+        ) {
             openers.open_golem(golem);
         }
         let now = self.world.game_time;
-        if horizon_client::mobs::transport_items::chested_companions::freezes(&self.world, id) {
+        if horizon_client::mobs::transport_items::chested_companions::freezes(
+            &self.world,
+            self.dim.id(),
+            id,
+        ) {
             openers.freeze(now, 10);
         }
         let Some(mob) = self.mobs.iter().find(|m| m.id == id) else {
@@ -872,6 +880,7 @@ impl Game<'_> {
             let open = !self.cc_players(id).is_empty()
                 || !horizon_client::mobs::transport_items::chested_companions::open_golems(
                     &self.world,
+                    self.dim.id(),
                     id,
                 )
                 .is_empty();

@@ -1,6 +1,6 @@
 // Source mixins still need a trait presence for Horizon's network feature
 // negotiation. Existing trait mods keep their original dispatch list.
-use super::Hooks;
+use crate::mod_api::Hooks;
 use std::sync::OnceLock;
 
 struct Presence;
