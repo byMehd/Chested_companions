@@ -35,7 +35,7 @@ class ChestBagTest {
             new Vec3i(-8, -4, 6), new Vec3i(-8, -4, -9),     // wolf, left and right
             new Vec3i(-22, 4, 4), new Vec3i(-22, 4, -7),     // cat, left and right
     };
-    private static final float OPEN = (float) Math.PI / 2.0F;
+    static final float OPEN = (float) Math.PI / 2.0F;
 
     /** min x, y, z then max x, y, z of the vertices of a cube, once moved by the given part pivot. */
     private static float[] extents(ModelPart.Cube cube, float pivotX, float pivotY, float pivotZ) {
@@ -194,7 +194,7 @@ class ChestBagTest {
     }
 
     /** Every box of the cubes whose path holds {@code only}, as min x, y, z then max x, y, z in model units, once posed. */
-    private static List<float[]> posedBoxes(ModelPart root, String only) {
+    static List<float[]> posedBoxes(ModelPart root, String only) {
         List<float[]> boxes = new ArrayList<>();
         root.visit(new PoseStack(), (pose, path, index, cube) -> {
             if (!path.contains(only)) return;
@@ -223,7 +223,7 @@ class ChestBagTest {
     }
 
     /** Closest a face of the open lid, across the pet, comes to such a face of a box of the model that it overlaps. */
-    private static float closestSidePlane(List<float[]> lid, List<float[]> model) {
+    static float closestSidePlane(List<float[]> lid, List<float[]> model) {
         float closest = Float.MAX_VALUE;
         for (float[] a : lid) {
             for (float[] b : model) {
@@ -263,16 +263,18 @@ class ChestBagTest {
         Bootstrap.bootStrap();
         Map<ModelLayerLocation, LayerDefinition> layers = LayerDefinitions.createRoots();
         //? if >=26.1 {
-        /*boolean babyWolfFlush = false; // Its own wider baby model already has clearance in WolfChestLayer.
+        /*boolean babyWolfFlush = true;
+        boolean babyCatFlush = true;
         *///?} else {
         boolean babyWolfFlush = true;
+        boolean babyCatFlush = false;
         //?}
         List<Pet> pets = List.of(
                 new Pet("wolf", ModelLayers.WOLF, true, false, false, true),
                 new Pet("pup", ModelLayers.WOLF_BABY, true, true, false, babyWolfFlush),
                 new Pet("sitting pup", ModelLayers.WOLF_BABY, true, true, true, babyWolfFlush),
                 new Pet("cat", ModelLayers.CAT, false, false, false, false),
-                new Pet("kitten", ModelLayers.CAT_BABY, false, true, false, false));
+                new Pet("kitten", ModelLayers.CAT_BABY, false, true, false, babyCatFlush));
         for (Pet pet : pets) {
             ModelPart root = layers.get(pet.layer()).bakeRoot();
             ModelPart body = root.getChild("body");

@@ -1,6 +1,7 @@
 package me.khajiitos.chestedcompanions.common.client.renderer.layer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import me.khajiitos.chestedcompanions.common.client.renderer.ChestBag;
 import me.khajiitos.chestedcompanions.common.client.renderer.PetTorso;
 import me.khajiitos.chestedcompanions.common.config.CCConfig;
 import me.khajiitos.chestedcompanions.common.mixin.accessor.CatModelAccessor;
@@ -86,7 +87,15 @@ public class CatChestLayer extends ChestLayer<CatRenderState, EntityModel<CatRen
             chestModelPart.yScale = BAG_SCALE * size;
             chestModelPart.zScale = BAG_SCALE * size;
             // A torso wider than the vanilla one would swallow the bags: hang them on its flanks.
-            spread(chestModelPart, Math.max(0.0F, torso.halfWidth() - TORSO_HALF_WIDTH * size) / (BAG_SCALE * size));
+            float amount = Math.max(0.0F, torso.halfWidth() - TORSO_HALF_WIDTH * size) / (BAG_SCALE * size);
+            if (vanillaBaby) {
+                // The kitten's own torso is wider than the adult shape the layout is tuned for, scaled down: spread the bags until
+                // the hinge is flush with the side of it. The rule that keeps an open lid off the side of the torso, which runs
+                // after this, moves them the hair further that shows the lid instead of burying it in the body.
+                float hingeFromMiddle = this.positionLeftChestCube().getZ() - ChestBag.GROW;
+                amount = torso.halfWidth() / (BAG_SCALE * size) - hingeFromMiddle;
+            }
+            spread(chestModelPart, amount);
             return;
         }
 

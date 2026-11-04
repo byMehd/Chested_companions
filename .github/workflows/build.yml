@@ -244,7 +244,7 @@ jobs:
             fi
             exit 1
           fi
-          expected=${{ inputs.visual == 'fatcat' && '32' || '61' }}
+          expected=${{ inputs.visual == 'fatcat' && '38' || '67' }}
           test "$(find "run/$SCREENS_DIR/screenshots" -maxdepth 1 -name '*.png' | wc -l)" -eq "$expected"
       - name: Upload screenshots
         if: always()

@@ -25,6 +25,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -55,6 +56,11 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
     private static boolean wanted(String part) {
         String only = System.getProperty("revived.screens.only", "");
         return only.isEmpty() || Arrays.asList(only.split(",")).contains(part);
+    }
+
+    /** Parts that are left out of the complete run, because they take many screenshots: {@code zfight} and {@code zfightadults}. */
+    private static boolean requested(String part) {
+        return Arrays.asList(System.getProperty("revived.screens.only", "").split(",")).contains(part);
     }
 
     @Override
@@ -103,6 +109,8 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             }
             if (wanted("sitting")) sittingPets(context, world, groundY);
             if (wanted("baby")) babyPets(context, world, groundY);
+            if (requested("zfight")) lidViews(context, world, groundY, true);
+            if (requested("zfightadults")) lidViews(context, world, groundY, false);
             if (wanted("mcv")) modChests(context, world, groundY);
             if (wanted("golem")) golemVisit(context, world, groundY);
             if (wanted("gui")) petScreen(context, world, groundY);
@@ -155,15 +163,18 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
             setLid(world, uuid, true);
             context.waitTicks(14);
             context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_copper_sitting_a_open");
+            look(world, groundY, -1);
+            context.waitTicks(8);
+            context.takeScreenshot(PREFIX + (wolf ? "wolf" : "cat") + "_copper_sitting_b_open");
             discard(world, uuid);
         }
     }
 
-    /** Kittens and pups wear the bags at half size, standing and sitting. */
+    /** Kittens and pups wear the bags at half size, standing and sitting, with the lid open, seen from both flanks. */
     private static void babyPets(ClientGameTestContext context, TestSingleplayerContext world, int groundY) {
         for (boolean wolf : new boolean[]{false, true}) {
             for (boolean sitting : new boolean[]{false, true}) {
-                String name = (wolf ? "wolf" : "cat") + "_copper_baby" + (sitting ? "_sitting" : "") + "_a_open";
+                String name = (wolf ? "wolf" : "cat") + "_copper_baby" + (sitting ? "_sitting" : "");
                 UUID uuid = spawnPet(world, groundY, wolf, Items.COPPER_CHEST);
                 world.getServer().runOnServer(server -> {
                     TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
@@ -174,10 +185,61 @@ public final class ClientScreenshotTest implements FabricClientGameTest {
                 look(world, groundY, 1);
                 setLid(world, uuid, true);
                 context.waitTicks(22);
-                context.takeScreenshot(PREFIX + name);
+                context.takeScreenshot(PREFIX + name + "_a_open");
+                look(world, groundY, -1);
+                context.waitTicks(8);
+                context.takeScreenshot(PREFIX + name + "_b_open");
                 discard(world, uuid);
             }
         }
+    }
+
+    /**
+     * Camera positions of {@link #lidViews}: distance in blocks, degrees round the pet from the flank, degrees looking
+     * down. A pet is not drawn beyond about 64 times its size, which is 20 blocks for a kitten.
+     */
+    private static final double[][] LID_VIEWS = {{2.6, 0, 8}, {2.6, 35, 30}, {2.6, -35, 30}, {1.3, 0, 8}, {10, 0, 3}, {10, 0, 20}, {15, 0, 5}};
+
+    /**
+     * Where the lids of the bags lie flat against the torso, they flicker (z-fighting) at some angles and distances only:
+     * every pose of a cat or a wolf, lid shut and open, from both flanks and from near, far, high and oblique cameras.
+     * Run with {@code -Drevived.screens.only=zfight} (kittens and pups) or {@code zfightadults}.
+     */
+    private static void lidViews(ClientGameTestContext context, TestSingleplayerContext world, int groundY, boolean baby) {
+        for (boolean wolf : new boolean[]{false, true}) {
+            for (boolean sitting : new boolean[]{false, true}) {
+                UUID uuid = spawnPet(world, groundY, wolf, Items.COPPER_CHEST);
+                world.getServer().runOnServer(server -> {
+                    TamableAnimal pet = (TamableAnimal) server.overworld().getEntity(uuid);
+                    pet.setBaby(baby);
+                    pet.setInSittingPose(sitting);
+                });
+                context.waitTicks(15);
+                for (boolean open : new boolean[]{true, false}) {
+                    setLid(world, uuid, open);
+                    context.waitTicks(open ? 22 : 16);
+                    for (int side : new int[]{1, -1}) {
+                        for (int view = 0; view < LID_VIEWS.length; view++) {
+                            double[] at = LID_VIEWS[view];
+                            lookFrom(world, groundY, side, at[0], at[1], at[2]);
+                            context.waitTicks(6);
+                            context.takeScreenshot(PREFIX + "zf_" + (wolf ? "wolf" : "cat") + (baby ? "_baby" : "_adult")
+                                    + (sitting ? "_sit" : "_stand") + (open ? "_open_" : "_shut_") + (side == 1 ? "a" : "b") + "_v" + view);
+                        }
+                    }
+                }
+                discard(world, uuid);
+            }
+        }
+    }
+
+    /** Puts the (invisible, spectating) camera at a distance from the pet, round it from the given flank, looking down at it. */
+    private static void lookFrom(TestSingleplayerContext world, int groundY, int side, double distance, double azimuth, double pitch) {
+        double angle = Math.toRadians(azimuth) + (side == 1 ? 0.0 : Math.PI);
+        // Eyes at the height that keeps the pet's back on the line of sight, 1.62 blocks above the feet of a spectator.
+        double eyes = 0.35 + distance * Math.tan(Math.toRadians(pitch));
+        world.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.3f %.3f %.3f %.2f %.2f",
+                0.5 + distance * Math.cos(angle), groundY + eyes - 1.62, 0.5 + distance * Math.sin(angle), 90.0 + Math.toDegrees(angle), pitch));
     }
 
     /** Chests of More Chest Variants when it is installed: one with its own bag texture, and pale oak's shared atlas. */
