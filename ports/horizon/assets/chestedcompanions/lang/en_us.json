@@ -1,0 +1,19 @@
+{
+  "container.chestedcompanions.pet": "Companion's Chest",
+  "gui.chestedcompanions.remove_chest": "Remove chest",
+  "mod.chestedcompanions.description": "Equip tamed cats and wolves with wooden, copper or Ender saddlebags.",
+  "settings.chestedcompanions.cats": "Allow cat chests",
+  "settings.chestedcompanions.wolves": "Allow wolf chests",
+  "settings.chestedcompanions.baby_cats": "Allow kitten chests",
+  "settings.chestedcompanions.baby_wolves": "Allow pup chests",
+  "settings.chestedcompanions.public": "Public chest access",
+  "settings.chestedcompanions.crouch": "Crouch to open",
+  "settings.chestedcompanions.feeding": "Feed injured pets first",
+  "settings.chestedcompanions.golems": "Copper golems use pet chests",
+  "settings.chestedcompanions.hide_cats": "Hide cat saddlebags",
+  "settings.chestedcompanions.hide_wolves": "Hide wolf saddlebags",
+  "settings.chestedcompanions.cat_icon": "Show cat chest icon",
+  "settings.chestedcompanions.wolf_icon": "Show wolf chest icon",
+  "settings.chestedcompanions.cat_rows": "Cat inventory slots",
+  "settings.chestedcompanions.wolf_rows": "Wolf inventory slots"
+}

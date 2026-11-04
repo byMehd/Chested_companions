@@ -1,4 +1,5 @@
 fn cc_register_models(models: &mut Vec<String>) {
+    models.push("chestedcompanions:entity/saddlebag/chest_icon".into());
     for name in [
         "chest",
         "ender",

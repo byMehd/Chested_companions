@@ -236,6 +236,10 @@ pub struct Config {
     pub crouch_to_open: bool,
     pub feeding_priority: bool,
     pub copper_golems: bool,
+    pub hide_cat_bag: bool,
+    pub hide_wolf_bag: bool,
+    pub cat_icon: bool,
+    pub wolf_icon: bool,
 }
 
 impl Default for Config {
@@ -251,6 +255,10 @@ impl Default for Config {
             crouch_to_open: false,
             feeding_priority: true,
             copper_golems: true,
+            hide_cat_bag: false,
+            hide_wolf_bag: false,
+            cat_icon: false,
+            wolf_icon: false,
         }
     }
 }

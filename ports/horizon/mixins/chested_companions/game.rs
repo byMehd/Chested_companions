@@ -171,6 +171,10 @@ fn load_configuration() -> Config {
     config.crouch_to_open = boolean("invertShiftToOpen", config.crouch_to_open);
     config.feeding_priority = boolean("feedingOverridesOpeningChest", config.feeding_priority);
     config.copper_golems = boolean("copperGolemsUsePetChests", config.copper_golems);
+    config.hide_cat_bag = boolean("hideCatChest", config.hide_cat_bag);
+    config.hide_wolf_bag = boolean("hideWolfChest", config.hide_wolf_bag);
+    config.cat_icon = boolean("showChestIconOnCats", config.cat_icon);
+    config.wolf_icon = boolean("showChestIconOnWolves", config.wolf_icon);
     let rows = |name: &str| match json[name]
         .as_str()
         .unwrap_or("one_row")
@@ -204,6 +208,10 @@ pub fn configuration() -> Config {
     })
 }
 
+pub(super) fn reset_configuration() {
+    CONFIG.with(|cached| *cached.borrow_mut() = None);
+}
+
 impl Game<'_> {
     fn cc_host(&mut self) -> &mut dyn horizon_client::mod_api::Host {
         self
@@ -221,7 +229,7 @@ impl Game<'_> {
             .filter(|m| m.alive() && Pet::from_entity(&m.kind.id).is_some())
             .map(|m| m.id)
             .collect();
-        if config.copper_golems {
+        if config.copper_golems && self.native_on("chested_companions") {
             for id in ids {
                 self.cc_store((KEY_X, KEY_Y, id as i32));
                 let Ok(Some(bag)) = self.cc_bag(id) else {
@@ -357,7 +365,7 @@ impl Game<'_> {
         render: &super::NativeMobRender<'_>,
         draw: &mut super::native_block_entity_draw::BlockEntityDraw,
     ) {
-        if Pet::from_entity(render.kind).is_none() {
+        if Pet::from_entity(render.kind).is_none() || !self.native_on("chested_companions") {
             return;
         }
         let mut attachments = match &self.remote {
@@ -379,6 +387,41 @@ impl Game<'_> {
         let Some(mob) = self.mobs.iter().find(|m| m.id == render.id) else {
             return;
         };
+        let config = configuration();
+        let cat = render.kind == "minecraft:cat";
+        if !self.ui.hide_gui
+            && (if cat {
+                config.cat_icon
+            } else {
+                config.wolf_icon
+            })
+            && self.pick_entity_hit().flatten() == Some(render.id as i32)
+        {
+            let rotation = glam::Mat4::from_rotation_y(render.body_yaw.to_radians())
+                * glam::Mat4::from_quat(self.camera_orientation());
+            let center = glam::Vec3::new(0.0, mob.bounds().size().y as f32 + 0.25, 0.0);
+            let corners = [
+                [-0.125, 0.125, 0.0],
+                [-0.125, -0.125, 0.0],
+                [0.125, -0.125, 0.0],
+                [0.125, 0.125, 0.0],
+            ]
+            .map(|v| (center + rotation.transform_vector3(glam::Vec3::from_array(v))).to_array());
+            self.native_draw_quad(
+                draw,
+                "chestedcompanions:chest_icon",
+                corners,
+                [0.0, 0.0, 16.0, 16.0],
+                0xFFFFFF,
+            );
+        }
+        if if cat {
+            config.hide_cat_bag
+        } else {
+            config.hide_wolf_bag
+        } {
+            return;
+        }
         let base = glam::Mat4::from_rotation_y(render.body_yaw.to_radians())
             * horizon_client::mobs::render::base_transform_at(
                 mob,
@@ -513,7 +556,7 @@ impl Game<'_> {
         stack: Option<&ItemStack>,
         claimed: &mut bool,
     ) {
-        if *claimed || !self.native_authoritative() {
+        if *claimed || !self.native_authoritative() || !self.native_on("chested_companions") {
             return;
         }
         let Some(pet) = Pet::from_entity(kind) else {
@@ -525,6 +568,14 @@ impl Game<'_> {
         let Some(index) = self.mobs.iter().position(|m| m.id == id && m.alive()) else {
             return;
         };
+        let bounds = self.mobs[index].bounds();
+        if self
+            .native_acting_player()
+            .is_some_and(|p| p.game_mode == 3)
+            || !self.within_entity_interaction_range(&bounds, 4.0)
+        {
+            return;
+        }
         let config = configuration();
         let owner = self.mobs[index]
             .extra
@@ -699,6 +750,28 @@ impl Game<'_> {
         }
     }
 
+    pub(super) fn cc_remove_local(&mut self, id: u32) {
+        if !self.native_authoritative()
+            || self.container.and_then(pet_key) != Some(id)
+            || self
+                .native_acting_player()
+                .is_some_and(|p| p.game_mode == 3)
+        {
+            return;
+        }
+        let player = self.native_acting_id();
+        let Some(mob) = self.mobs.iter().find(|m| m.id == id && m.alive()) else {
+            return;
+        };
+        let bounds = mob.bounds();
+        if !configuration().can_access(mob.extra.owner.map(uuid).filter(|_| mob.extra.tame), player)
+            || !self.within_entity_interaction_range(&bounds, 4.0)
+        {
+            return;
+        }
+        self.cc_remove(id);
+    }
+
     pub(super) fn cc_open_guest(
         &mut self,
         host: &mut super::lan::LanHost,
@@ -728,6 +801,11 @@ impl Game<'_> {
         let title = horizon_protocol::text::translatable("container.chestedcompanions.pet", &[]);
         host.hub
             .open_container(conn, menu, title, key, slots, items);
+        if let Some(guest) = host.hub.guest(conn)
+            && let Some(menu) = &guest.menu
+        {
+            self.cc_notify_menu(guest.uuid, id, menu.window);
+        }
         Some(true)
     }
 
@@ -735,13 +813,17 @@ impl Game<'_> {
         let key = guest.menu.as_ref()?.pos?;
         let id = pet_key(key)?;
         let config = configuration();
-        Some(self.mobs.iter().find(|m| m.id == id).is_some_and(|m| {
-            m.alive()
-                && m.extra.tame
-                && config.can_access(m.extra.owner.map(uuid), guest.uuid)
-                && self.cc_bag_read(id).is_some()
-                && super::lan_actions::guest_within_entity_range(guest, &m.bounds(), 4.0)
-        }))
+        Some(
+            !guest.dead
+                && !guest.spectator()
+                && self.mobs.iter().find(|m| m.id == id).is_some_and(|m| {
+                    m.alive()
+                        && m.extra.tame
+                        && config.can_access(m.extra.owner.map(uuid), guest.uuid)
+                        && self.cc_bag_read(id).is_some()
+                        && super::lan_actions::guest_within_entity_range(guest, &m.bounds(), 4.0)
+                }),
+        )
     }
 
     fn cc_bag_read(&self, id: u32) -> Option<Bag<ItemStack>> {
@@ -779,7 +861,8 @@ impl Game<'_> {
             }
             // RandomTickSpeed is read from the authoritative world's gamerules.
             let speed = self.level.game_rule("random_tick_speed");
-            if f64::from(self.world.random.next_float()) < bag.chest.aging_probability(speed)
+            if self.native_on("chested_companions")
+                && f64::from(self.world.random.next_float()) < bag.chest.aging_probability(speed)
                 && let Some(next) = bag.chest.next()
             {
                 bag.chest = next;

@@ -6,6 +6,27 @@ priority = 100
 [compatibility]
 horizon_revision = "67dad0d1a5adca139b426c8114e74a33b376ba64"
 
+[[module]]
+id = "registration"
+file = "crates/horizon-client/src/mod_api.rs"
+name = "chested_companions"
+source = "registration.rs"
+
+[[injection]]
+id = "registration-hook"
+target = "horizon_client::mod_api::mods"
+kind = "RETURN"
+helper = "registration-hook.rs"
+bindings = [{ name = "value", ty = "&'static [Box<dyn Hooks>]", value = "$value" }]
+
+[[injection]]
+id = "metadata"
+hook = "mods"
+hook_version = 1
+kind = "HEAD"
+helper = "metadata.rs"
+bindings = [{ name = "mods", ty = "&mut Vec<NativeMod>", value = "&mut *mods" }]
+
 [[crate]]
 id = "runtime"
 path = "runtime"
@@ -54,6 +75,100 @@ id = "game"
 file = "crates/horizon-client/src/game.rs"
 name = "chested_companions"
 source = "game.rs"
+
+[[module]]
+id = "ui"
+file = "crates/horizon-client/src/game.rs"
+name = "chested_companions_ui"
+source = "ui.rs"
+
+[[module]]
+id = "settings"
+file = "crates/horizon-client/src/game.rs"
+name = "chested_companions_settings"
+source = "settings.rs"
+
+[[injection]]
+id = "settings-list"
+hook = "settings"
+hook_version = 1
+kind = "HEAD"
+helper = "settings-list.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "mod_id", ty = "&str", value = "mod_id" },
+  { name = "buttons", ty = "&mut Vec<String>", value = "&mut *buttons" },
+]
+
+[[injection]]
+id = "settings-click"
+hook = "settings_click"
+hook_version = 1
+kind = "HEAD"
+helper = "settings-click.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "mod_id", ty = "&str", value = "mod_id" },
+  { name = "button", ty = "usize", value = "button" },
+]
+
+[[injection]]
+id = "ui-render"
+hook = "screen_render_post"
+hook_version = 1
+kind = "HEAD"
+helper = "ui-render.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "batch", ty = "&mut HudBatch", value = "&mut *batch" },
+  { name = "screen", ty = "&NativeScreenView<'_>", value = "screen" },
+]
+
+[[injection]]
+id = "ui-click"
+hook = "screen_mouse_button_pressed_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "ui-click.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "screen", ty = "&NativeScreenView<'_>", value = "screen" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "canceled", ty = "&mut bool", value = "&mut *canceled" },
+]
+
+[[injection]]
+id = "ui-tick"
+hook = "tick"
+hook_version = 1
+kind = "HEAD"
+helper = "ui-tick.rs"
+bindings = [{ name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" }]
+
+[[injection]]
+id = "ui-from-server"
+hook = "net_from_server"
+hook_version = 1
+kind = "HEAD"
+helper = "ui-from-server.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "channel", ty = "&str", value = "channel" },
+  { name = "data", ty = "&[u8]", value = "data" },
+]
+
+[[injection]]
+id = "ui-from-client"
+hook = "net_from_client"
+hook_version = 1
+kind = "HEAD"
+helper = "ui-from-client.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "player", ty = "u128", value = "player" },
+  { name = "channel", ty = "&str", value = "channel" },
+  { name = "data", ty = "&[u8]", value = "data" },
+]
 
 [[module]]
 id = "torso"

@@ -70,11 +70,11 @@ jobs:
         run: cargo check --locked -p horizon-client --no-default-features --target-dir ../native-cargo
       - name: Test native inventory persistence and synchronization
         working-directory: ports/horizon/target/game
-        run: cargo test --locked -p horizon-client --lib --no-default-features --target-dir ../native-cargo game::chested_companions::tests
+        run: cargo test --locked -p horizon-client --lib --no-default-features --target-dir ../native-cargo chested_companions
       - name: Validate the native source and asset package
         run: |
           python3 ports/horizon/tools/package.py
-          cargo run --locked --manifest-path ports/horizon/target/game/Cargo.toml -p cargo-horizon-mod --target-dir ports/horizon/target/native-cargo -- check ports/horizon/target/chested_companions-1.0.1+26.3.hmod --json
+          cargo run --locked --manifest-path ports/horizon/target/game/Cargo.toml -p cargo-horizon-mod --target-dir ports/horizon/target/native-cargo -- check ports/horizon/target/chested_companions-1.0.1+26.3.hmod --kind native-mod --json
       - uses: actions/upload-artifact@v6
         if: always()
         with:

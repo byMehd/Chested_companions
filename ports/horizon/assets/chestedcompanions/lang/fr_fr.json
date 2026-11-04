@@ -1,0 +1,19 @@
+{
+  "container.chestedcompanions.pet": "Coffre du compagnon",
+  "gui.chestedcompanions.remove_chest": "Retirer le coffre",
+  "mod.chestedcompanions.description": "Équipez vos chats et loups apprivoisés de sacoches en bois, en cuivre ou de l’Ender.",
+  "settings.chestedcompanions.cats": "Autoriser les coffres sur les chats",
+  "settings.chestedcompanions.wolves": "Autoriser les coffres sur les loups",
+  "settings.chestedcompanions.baby_cats": "Autoriser les coffres sur les chatons",
+  "settings.chestedcompanions.baby_wolves": "Autoriser les coffres sur les louveteaux",
+  "settings.chestedcompanions.public": "Accès public aux coffres",
+  "settings.chestedcompanions.crouch": "S’accroupir pour ouvrir",
+  "settings.chestedcompanions.feeding": "Nourrir en priorité les animaux blessés",
+  "settings.chestedcompanions.golems": "Les golems utilisent les coffres des compagnons",
+  "settings.chestedcompanions.hide_cats": "Masquer les sacoches des chats",
+  "settings.chestedcompanions.hide_wolves": "Masquer les sacoches des loups",
+  "settings.chestedcompanions.cat_icon": "Afficher l’icône du coffre des chats",
+  "settings.chestedcompanions.wolf_icon": "Afficher l’icône du coffre des loups",
+  "settings.chestedcompanions.cat_rows": "Cases d’inventaire des chats",
+  "settings.chestedcompanions.wolf_rows": "Cases d’inventaire des loups"
+}
