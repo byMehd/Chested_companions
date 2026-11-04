@@ -1,0 +1,131 @@
+[mod]
+id = "chested_companions"
+version = "1.0.1"
+priority = 100
+
+[compatibility]
+horizon_revision = "67dad0d1a5adca139b426c8114e74a33b376ba64"
+
+[[crate]]
+id = "runtime"
+path = "runtime"
+dependent = "horizon-client"
+
+[[module]]
+id = "game"
+file = "crates/horizon-client/src/game.rs"
+name = "chested_companions"
+source = "game.rs"
+
+[[module]]
+id = "torso"
+file = "crates/horizon-client/src/mobs/render.rs"
+name = "chested_companions"
+source = "torso.rs"
+visibility = "pub"
+
+[[injection]]
+id = "render"
+hook = "mob_layer"
+hook_version = 1
+kind = "HEAD"
+helper = "render.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "mob", ty = "&NativeMobRender<'_>", value = "mob" },
+  { name = "draw", ty = "&mut BlockEntityDraw", value = "&mut *draw" },
+]
+
+[[injection]]
+id = "render-listened"
+hook = "player_render_listened"
+hook_version = 1
+kind = "HEAD"
+helper = "render-listened.rs"
+bindings = [{ name = "listened", ty = "&mut bool", value = "&mut *listened" }]
+
+[[injection]]
+id = "models"
+hook = "standalone_models"
+hook_version = 1
+kind = "HEAD"
+helper = "models.rs"
+bindings = [{ name = "models", ty = "&mut Vec<String>", value = "&mut *models" }]
+
+[[injection]]
+id = "interact"
+hook = "interact_entity"
+hook_version = 1
+kind = "HEAD"
+helper = "interact.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "entity", ty = "i32", value = "entity" },
+  { name = "kind", ty = "&str", value = "kind" },
+  { name = "stack", ty = "Option<&ItemStack>", value = "stack" },
+  { name = "claimed", ty = "&mut bool", value = "&mut *claimed" },
+]
+
+[[injection]]
+id = "level-tick"
+hook = "level_tick_post"
+hook_version = 1
+kind = "HEAD"
+helper = "tick.rs"
+bindings = [{ name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" }]
+
+[[injection]]
+id = "store"
+target = "horizon_client::game::minecarts::Game<'_>::store_cart_items"
+kind = "HEAD"
+helper = "store.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "key", ty = "(i32, i32, i32)", value = "key" },
+]
+
+[[injection]]
+id = "close-local"
+target = "horizon_client::game::minecarts::Game<'_>::close_cart_container"
+kind = "HEAD"
+cancellable = true
+helper = "close-local.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "key", ty = "(i32, i32, i32)", value = "key" },
+]
+
+[[injection]]
+id = "close-guest"
+target = "horizon_client::game::lan_actions::Game<'_>::close_guest_vehicle_menu"
+kind = "HEAD"
+cancellable = true
+helper = "close-guest.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "key", ty = "(i32, i32, i32)", value = "key" },
+]
+
+[[injection]]
+id = "open-guest"
+target = "horizon_client::game::lan_actions::Game<'_>::lan_open_vehicle_container"
+kind = "HEAD"
+cancellable = true
+helper = "open-guest.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "host", ty = "&mut LanHost", value = "&mut *host" },
+  { name = "conn", ty = "u32", value = "conn" },
+  { name = "pos", ty = "(i32, i32, i32)", value = "pos" },
+]
+
+[[injection]]
+id = "guest-valid"
+target = "horizon_client::game::lan_actions::Game<'_>::container_menu_valid"
+kind = "HEAD"
+cancellable = true
+helper = "guest-valid.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },
+  { name = "guest", ty = "&horizon_client::lan::guest::Guest", value = "g" },
+]

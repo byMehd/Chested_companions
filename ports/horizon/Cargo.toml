@@ -1,0 +1,12 @@
+[workspace]
+members = ["mixins/chested_companions/runtime"]
+resolver = "3"
+
+[workspace.package]
+version = "1.0.1"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+
+[profile.release]
+overflow-checks = true

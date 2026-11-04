@@ -1,0 +1,10 @@
+[package]
+name = "chested-companions-runtime"
+version = "1.0.1"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+description = "Gameplay and saddlebag geometry for Chested Companions: Revived on Horizon"
+
+[lib]
+path = "src/lib.rs"

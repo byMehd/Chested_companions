@@ -1,0 +1,641 @@
+// Native adapters execute inside Horizon's game module. Persistent inventories
+// use Horizon attachments; ordinary menu clicks use its existing menu engine.
+use super::Game;
+use chested_companions_runtime::{Bag, Chest, Config, Pet};
+use horizon_client::mod_api::{
+    AttachmentCodec, AttachmentError, AttachmentType, Compound, Holder, Tag,
+};
+use horizon_client::{containers::BlockEntity, items::ItemStack};
+use horizon_core::random::RandomSource;
+use horizon_items::item_nbt::{decode_items, encode_items, item_from_nbt, item_to_nbt};
+
+pub const KEY_X: i32 = i32::MAX - 64;
+pub const ENDER_X: i32 = i32::MAX - 65;
+const KEY_Y: i32 = horizon_client::lan::menu::VEHICLE_KEY_Y;
+
+pub fn pet_key(key: (i32, i32, i32)) -> Option<u32> {
+    (key.1 == KEY_Y && matches!(key.0, KEY_X | ENDER_X))
+        .then(|| u32::try_from(key.2).ok())
+        .flatten()
+}
+
+static BAG: AttachmentType<Option<Bag<ItemStack>>> = AttachmentType {
+    namespace: "chestedcompanions",
+    name: "bag",
+    default: || None,
+    codec: Some(AttachmentCodec {
+        encode: encode_bag,
+        decode: decode_bag,
+    }),
+    copy_on_death: false,
+    sync: false,
+};
+
+#[derive(Clone, Default)]
+struct Visual {
+    chest: Option<Chest>,
+    open: bool,
+    changed: i64,
+    from: f32,
+}
+
+impl Visual {
+    fn openness(&self, now: f64) -> f32 {
+        let delta = ((now - self.changed as f64).max(0.0) * 0.1) as f32;
+        if self.open {
+            (self.from + delta).min(1.0)
+        } else {
+            (self.from - delta).max(0.0)
+        }
+    }
+}
+
+static VISUAL: AttachmentType<Visual> = AttachmentType {
+    namespace: "chestedcompanions",
+    name: "visual",
+    default: Visual::default,
+    codec: Some(AttachmentCodec {
+        encode: |v| {
+            let mut c = Compound::new();
+            if let Some(chest) = v.chest {
+                c.insert("chest".into(), Tag::String(chest.item().into()));
+            }
+            c.insert("open".into(), Tag::Byte(i8::from(v.open)));
+            c.insert("changed".into(), Tag::Long(v.changed));
+            c.insert("from".into(), Tag::Float(v.from));
+            Ok(c)
+        },
+        decode: |c| {
+            Ok(Visual {
+                chest: match c.get(&"chest".into()) {
+                    Some(Tag::String(s)) => Chest::from_item(&s.to_string()),
+                    _ => None,
+                },
+                open: matches!(c.get(&"open".into()), Some(Tag::Byte(1))),
+                changed: match c.get(&"changed".into()) {
+                    Some(Tag::Long(n)) => *n,
+                    _ => 0,
+                },
+                from: match c.get(&"from".into()) {
+                    Some(Tag::Float(n)) if n.is_finite() => n.clamp(0.0, 1.0),
+                    _ => 0.0,
+                },
+            })
+        },
+    }),
+    copy_on_death: false,
+    sync: true,
+};
+
+fn encode_bag(bag: &Option<Bag<ItemStack>>) -> Result<Compound, AttachmentError> {
+    let mut c = Compound::new();
+    c.insert("schema".into(), Tag::Int(1));
+    if let Some(bag) = bag {
+        c.insert("ChestItem".into(), item_to_nbt(&bag.equipped));
+        c.insert("size".into(), Tag::Int(bag.slots().len() as i32));
+        if bag.chest != Chest::Ender {
+            c.insert("CCItems".into(), encode_items(bag.slots()));
+        }
+    }
+    Ok(c)
+}
+
+fn decode_bag(c: &Compound) -> Result<Option<Bag<ItemStack>>, AttachmentError> {
+    if c.get(&"schema".into()) != Some(&Tag::Int(1)) {
+        return Err(AttachmentError::Decode);
+    }
+    let Some(item) = c.get(&"ChestItem".into()) else {
+        return Ok(None);
+    };
+    let item = item_from_nbt(item).ok_or(AttachmentError::Decode)?;
+    let chest = Chest::from_item(&item.item).ok_or(AttachmentError::Decode)?;
+    if item.count != 1 {
+        return Err(AttachmentError::Decode);
+    }
+    let size = match c.get(&"size".into()) {
+        Some(Tag::Int(n @ (0 | 9 | 18 | 27))) => *n as usize,
+        _ => return Err(AttachmentError::Decode),
+    };
+    if (chest == Chest::Ender) != (size == 0) {
+        return Err(AttachmentError::Decode);
+    }
+    let mut bag = Bag::new(chest, item, (size / 9) as u8);
+    bag.slots_mut()
+        .clone_from_slice(&decode_items(c.get(&"CCItems".into()), size));
+    Ok(Some(bag))
+}
+
+fn uuid(words: [i32; 4]) -> u128 {
+    words
+        .into_iter()
+        .fold(0, |a, word| (a << 32) | u128::from(word as u32))
+}
+
+pub fn configuration() -> Config {
+    let mut config = Config::default();
+    let Ok(dir) = Game::native_config_dir() else {
+        return config;
+    };
+    let path = dir.join("chestedcompanions_revived.json");
+    let json = match std::fs::read(&path) {
+        Ok(bytes) => match serde_json::from_slice::<serde_json::Value>(&bytes) {
+            Ok(json) => json,
+            Err(error) => {
+                log::warn!("Chested Companions: {}: {error}", path.display());
+                return config;
+            }
+        },
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return config,
+        Err(error) => {
+            log::warn!("Chested Companions: {}: {error}", path.display());
+            return config;
+        }
+    };
+    let boolean = |name: &str, fallback| json[name].as_bool().unwrap_or(fallback);
+    config.cats = boolean("allowChestOnCats", config.cats);
+    config.wolves = boolean("allowChestOnWolves", config.wolves);
+    config.baby_cats = boolean("allowChestOnBabyCat", config.baby_cats);
+    config.baby_wolves = boolean("allowChestOnBabyWolf", config.baby_wolves);
+    config.public_chest = boolean("publicChest", config.public_chest);
+    config.crouch_to_open = boolean("invertShiftToOpen", config.crouch_to_open);
+    config.feeding_priority = boolean("feedingOverridesOpeningChest", config.feeding_priority);
+    config.copper_golems = boolean("copperGolemsUsePetChests", config.copper_golems);
+    let rows = |name: &str| match json[name]
+        .as_str()
+        .unwrap_or("one_row")
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "two_rows" => 2,
+        "three_rows" => 3,
+        _ => 1,
+    };
+    config.cat_rows = rows("catInventoryCapacity");
+    config.wolf_rows = rows("wolfInventoryCapacity");
+    config
+}
+
+impl Game<'_> {
+    pub(super) fn cc_draw(
+        &self,
+        render: &super::NativeMobRender<'_>,
+        draw: &mut super::native_block_entity_draw::BlockEntityDraw,
+    ) {
+        if Pet::from_entity(render.kind).is_none() {
+            return;
+        }
+        let mut attachments = match &self.remote {
+            Some(remote) => remote.attachments.get(&Holder::Entity(render.id)).cloned(),
+            None => self
+                .persist
+                .uuids
+                .get(&render.id)
+                .and_then(|uuid| self.entity_attachments.get(uuid))
+                .cloned(),
+        };
+        let Some(attachments) = attachments.as_mut() else {
+            return;
+        };
+        let Ok(Some(visual)) = attachments.get_existing(&VISUAL) else {
+            return;
+        };
+        let Some(chest) = visual.chest else { return };
+        let Some(mob) = self.mobs.iter().find(|m| m.id == render.id) else {
+            return;
+        };
+        let base = glam::Mat4::from_rotation_y(render.body_yaw.to_radians())
+            * horizon_client::mobs::render::base_transform_at(
+                mob,
+                render.partial,
+                glam::Mat4::IDENTITY,
+            );
+        let Some(torso) = horizon_client::mobs::render::chested_companions::torso(
+            mob,
+            render.partial,
+            self.res.mob_data(),
+            base,
+        ) else {
+            return;
+        };
+        let size = ((torso.max.y - torso.min.y)
+            / if render.kind == "minecraft:cat" {
+                16.0
+            } else {
+                9.0
+            })
+        .clamp(0.25, 4.0);
+        let scale = size
+            * if render.kind == "minecraft:cat" {
+                0.65
+            } else {
+                0.75
+            };
+        let center = (torso.min + torso.max) * 0.5;
+        let angle = chested_companions_runtime::lid_angle(
+            visual.openness(draw.game_time as f64 + f64::from(draw.partial)),
+        );
+        let lid_height = 3.75 * scale;
+        let top = torso.max.z + scale;
+        let seam = top - lid_height;
+        // At every angle the complete lid slab, rather than just its hinge
+        // plane, clears the visible torso. Closed bags sit against the flank.
+        let spread = 0.3 * scale + lid_height * angle.sin();
+        for side in [-1.0_f32, 1.0] {
+            let hinge = if side < 0.0 {
+                torso.min.x - spread
+            } else {
+                torso.max.x + spread
+            };
+            let outer = hinge + side * 5.0 * scale;
+            let lo = glam::Vec3::new(hinge.min(outer), center.y - 5.0 * scale, top - 10.0 * scale);
+            let hi = glam::Vec3::new(hinge.max(outer), center.y + 5.0 * scale, seam);
+            draw_bag_box(self, draw, chest.texture(), torso.matrix, lo, hi, 6.0, 11.0);
+            let lo = glam::Vec3::new(lo.x, lo.y, seam);
+            let hi = glam::Vec3::new(hi.x, hi.y, top);
+            let pivot = glam::Vec3::new(hinge, center.y, seam) / 16.0;
+            let lid = torso.matrix
+                * glam::Mat4::from_translation(pivot)
+                * glam::Mat4::from_rotation_y(-side * angle)
+                * glam::Mat4::from_translation(-pivot);
+            draw_bag_box(self, draw, chest.texture(), lid, lo, hi, 3.0, 6.0);
+        }
+    }
+
+    fn cc_bag(&mut self, id: u32) -> Result<Option<Bag<ItemStack>>, AttachmentError> {
+        BAG.get_existing(self, Holder::Entity(id))
+            .map(Option::flatten)
+    }
+
+    fn cc_visual(&mut self, id: u32, chest: Option<Chest>, open: bool) {
+        let holder = Holder::Entity(id);
+        let now = self.world.game_time;
+        let Ok(mut visual) = VISUAL.get(self, holder) else {
+            return;
+        };
+        if visual.chest != chest || visual.open != open {
+            visual.from = visual.openness(now as f64);
+            visual.chest = chest;
+            visual.open = open;
+            visual.changed = now;
+            if let Err(error) = VISUAL.set(self, holder, visual) {
+                log::error!("Chested Companions visual: {error:?}");
+            }
+        }
+    }
+
+    pub(super) fn cc_store(&mut self, key: (i32, i32, i32)) {
+        let Some(id) = pet_key(key) else { return };
+        if key.0 == ENDER_X {
+            return;
+        }
+        let Some(BlockEntity::Chest(items)) = self.world.block_entities.get(&key) else {
+            return;
+        };
+        let items = items.clone();
+        let Ok(Some(mut bag)) = self.cc_bag(id) else {
+            return;
+        };
+        if bag.chest == Chest::Ender || items.len() != bag.slots().len() {
+            return;
+        }
+        bag.slots_mut().clone_from_slice(&items);
+        if let Err(error) = BAG.set(self, Holder::Entity(id), Some(bag)) {
+            log::error!("Chested Companions save: {error:?}");
+        }
+    }
+
+    pub(super) fn cc_interact(
+        &mut self,
+        entity: i32,
+        kind: &str,
+        stack: Option<&ItemStack>,
+        claimed: &mut bool,
+    ) {
+        if *claimed || !self.native_authoritative() {
+            return;
+        }
+        let Some(pet) = Pet::from_entity(kind) else {
+            return;
+        };
+        let Ok(id) = u32::try_from(entity) else {
+            return;
+        };
+        let Some(index) = self.mobs.iter().position(|m| m.id == id && m.alive()) else {
+            return;
+        };
+        let config = configuration();
+        let owner = self.mobs[index]
+            .extra
+            .owner
+            .map(uuid)
+            .filter(|_| self.mobs[index].extra.tame);
+        let player = self.native_acting_id();
+        let crouch = self.keys.contains(&winit::keyboard::KeyCode::ShiftLeft)
+            || self.keys.contains(&winit::keyboard::KeyCode::ShiftRight);
+        if !config.can_access(owner, player)
+            || crouch != config.crouch_to_open
+            || self
+                .player
+                .as_ref()
+                .is_none_or(|p| p.health.health() <= 0.0)
+        {
+            return;
+        }
+        if config.feeding_priority
+            && self.mobs[index].health < self.mobs[index].attrs.max_health
+            && stack.is_some_and(|s| self.mobs[index].kind.food.contains(&s.item))
+        {
+            return;
+        }
+        let Ok(bag) = self.cc_bag(id) else { return };
+        if let Some(mut bag) = bag {
+            if stack.is_some_and(|s| &*s.item == "minecraft:shears") {
+                self.damage_held(1);
+                self.cc_remove(id);
+            } else {
+                let next = stack.and_then(|s| {
+                    if &*s.item == "minecraft:honeycomb" {
+                        bag.chest.wax().map(|c| (c, true))
+                    } else if self.res.items().item_in_tag("minecraft:axes", &s.item) {
+                        bag.chest.scrape().map(|c| (c, false))
+                    } else {
+                        None
+                    }
+                });
+                if let Some((chest, consume)) = next {
+                    bag.chest = chest;
+                    bag.equipped.item = chest.item().into();
+                    if BAG.set(self, Holder::Entity(id), Some(bag)).is_err() {
+                        return;
+                    }
+                    if consume {
+                        self.consume_held();
+                    } else {
+                        self.damage_held(1);
+                    }
+                    self.cc_visual(id, Some(chest), false);
+                    self.audio.play(
+                        if consume {
+                            "minecraft:item.honeycomb.wax_on"
+                        } else {
+                            "minecraft:item.axe.scrape"
+                        },
+                        Some(self.mobs[index].center()),
+                        1.0,
+                        1.0,
+                    );
+                } else {
+                    self.cc_open(id, bag);
+                }
+            }
+            *claimed = true;
+        } else if config.can_equip(pet, self.mobs[index].is_baby()) {
+            let Some(stack) = stack else { return };
+            let Some(chest) = Chest::from_item(&stack.item) else {
+                return;
+            };
+            let mut equipped = stack.clone();
+            equipped.count = 1;
+            let bag = Bag::new(chest, equipped, config.rows(pet, chest));
+            if BAG.set(self, Holder::Entity(id), Some(bag)).is_err() {
+                return;
+            }
+            if !self.creative {
+                self.consume_held();
+            }
+            self.cc_visual(id, Some(chest), false);
+            self.audio.play(
+                "minecraft:entity.donkey.chest",
+                Some(self.mobs[index].center()),
+                1.0,
+                1.0,
+            );
+            *claimed = true;
+        }
+    }
+
+    fn cc_open(&mut self, id: u32, mut bag: Bag<ItemStack>) {
+        self.close_container();
+        let Some(pet) = self
+            .mobs
+            .iter()
+            .find(|m| m.id == id)
+            .and_then(|m| Pet::from_entity(&m.kind.id))
+        else {
+            return;
+        };
+        let rows = configuration().rows(pet, bag.chest);
+        for overflow in bag.resize(rows) {
+            self.cc_drop(id, overflow);
+        }
+        let chest = bag.chest;
+        if BAG
+            .set(self, Holder::Entity(id), Some(bag.clone()))
+            .is_err()
+        {
+            return;
+        }
+        let key = (
+            if chest == Chest::Ender {
+                ENDER_X
+            } else {
+                KEY_X
+            },
+            KEY_Y,
+            id as i32,
+        );
+        if chest == Chest::Ender {
+            self.open_ender_chest(key);
+        } else {
+            self.world
+                .block_entities
+                .get_or_insert_with(key, || BlockEntity::Chest(bag.slots().to_vec()));
+            self.container = Some(key);
+        }
+        self.screen = super::Screen::Inventory;
+        self.capture(false);
+        self.right = false;
+        self.cc_visual(id, Some(chest), true);
+    }
+
+    fn cc_drop(&mut self, id: u32, stack: ItemStack) {
+        if let Some(mob) = self.mobs.iter().find(|m| m.id == id) {
+            let p = mob.position;
+            self.spawn_item(stack, [p.x, p.y + 0.25, p.z], [0.0, 0.1, 0.0], 10);
+        }
+    }
+
+    pub(super) fn cc_remove(&mut self, id: u32) {
+        self.cc_store((KEY_X, KEY_Y, id as i32));
+        let Ok(mut bag) = self.cc_bag(id) else { return };
+        if BAG.set(self, Holder::Entity(id), None).is_err() {
+            return;
+        }
+        self.cc_visual(id, None, false);
+        for x in [KEY_X, ENDER_X] {
+            let key = (x, KEY_Y, id as i32);
+            if self.container == Some(key) {
+                self.close_container();
+            }
+            self.world.block_entities.remove(&key);
+        }
+        for stack in chested_companions_runtime::detach(&mut bag) {
+            self.cc_drop(id, stack);
+        }
+    }
+
+    pub(super) fn cc_open_guest(
+        &mut self,
+        host: &mut super::lan::LanHost,
+        conn: u32,
+        key: (i32, i32, i32),
+    ) -> Option<bool> {
+        let id = pet_key(key)?;
+        let Ok(Some(bag)) = self.cc_bag(id) else {
+            return Some(false);
+        };
+        let slots = if bag.chest == Chest::Ender {
+            horizon_client::lan::menu::Slots::Ender
+        } else {
+            horizon_client::lan::menu::Slots::Block(key)
+        };
+        let items = host
+            .hub
+            .guest(conn)
+            .and_then(|g| slots.read(&self.world, g))?;
+        let menu = match items.len() {
+            9 => "minecraft:generic_9x1",
+            18 => "minecraft:generic_9x2",
+            27 => "minecraft:generic_9x3",
+            _ => return Some(false),
+        };
+        self.guest_close_all(host, conn);
+        let title = horizon_protocol::text::translatable("container.chestedcompanions.pet", &[]);
+        host.hub
+            .open_container(conn, menu, title, key, slots, items);
+        Some(true)
+    }
+
+    pub(super) fn cc_guest_valid(&self, guest: &horizon_client::lan::guest::Guest) -> Option<bool> {
+        let key = guest.menu.as_ref()?.pos?;
+        let id = pet_key(key)?;
+        let config = configuration();
+        Some(self.mobs.iter().find(|m| m.id == id).is_some_and(|m| {
+            m.alive()
+                && m.extra.tame
+                && config.can_access(m.extra.owner.map(uuid), guest.uuid)
+                && self.cc_bag_read(id).is_some()
+                && super::lan_actions::guest_within_entity_range(guest, &m.bounds(), 4.0)
+        }))
+    }
+
+    fn cc_bag_read(&self, id: u32) -> Option<Bag<ItemStack>> {
+        let mut map = if let Some(remote) = &self.remote {
+            remote.attachments.get(&Holder::Entity(id))?.clone()
+        } else {
+            self.entity_attachments
+                .get(self.persist.uuids.get(&id)?)?
+                .clone()
+        };
+        map.get_existing(&BAG).ok().flatten().flatten()
+    }
+
+    pub(super) fn cc_tick(&mut self) {
+        if !self.native_authoritative() {
+            return;
+        }
+        let ids: Vec<_> = self
+            .mobs
+            .iter()
+            .filter(|m| Pet::from_entity(&m.kind.id).is_some())
+            .map(|m| m.id)
+            .collect();
+        for id in ids {
+            self.cc_store((KEY_X, KEY_Y, id as i32));
+            let Ok(Some(mut bag)) = self.cc_bag(id) else {
+                continue;
+            };
+            let Some(index) = self.mobs.iter().position(|m| m.id == id) else {
+                continue;
+            };
+            if !self.mobs[index].alive() {
+                self.cc_remove(id);
+                continue;
+            }
+            // RandomTickSpeed is read from the authoritative world's gamerules.
+            let speed = self.level.game_rule("random_tick_speed");
+            if f64::from(self.world.random.next_float()) < bag.chest.aging_probability(speed)
+                && let Some(next) = bag.chest.next()
+            {
+                bag.chest = next;
+                bag.equipped.item = next.item().into();
+                let _ = BAG.set(self, Holder::Entity(id), Some(bag.clone()));
+            }
+            let open = self.container.and_then(pet_key) == Some(id)
+                || self.lan.as_ref().is_some_and(|host| {
+                    host.hub
+                        .guests
+                        .iter()
+                        .any(|g| g.menu.as_ref().and_then(|m| m.pos).and_then(pet_key) == Some(id))
+                });
+            self.cc_visual(id, Some(bag.chest), open);
+            if !open {
+                self.world.block_entities.remove(&(KEY_X, KEY_Y, id as i32));
+            }
+        }
+    }
+}
+
+fn draw_bag_box(
+    game: &Game<'_>,
+    draw: &mut super::native_block_entity_draw::BlockEntityDraw,
+    sprite: &str,
+    matrix: glam::Mat4,
+    lo: glam::Vec3,
+    hi: glam::Vec3,
+    v0: f32,
+    v1: f32,
+) {
+    let [x0, y0, z0] = lo.to_array();
+    let [x1, y1, z1] = hi.to_array();
+    let faces = [
+        (
+            [[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]],
+            [3.0, v0, 11.0, v1],
+        ),
+        (
+            [[x0, y1, z1], [x0, y1, z0], [x0, y0, z0], [x0, y0, z1]],
+            [3.0, v0, 11.0, v1],
+        ),
+        (
+            [[x0, y0, z1], [x0, y0, z0], [x1, y0, z0], [x1, y0, z1]],
+            [0.0, v0, 3.0, v1],
+        ),
+        (
+            [[x1, y1, z1], [x1, y1, z0], [x0, y1, z0], [x0, y1, z1]],
+            [11.0, v0, 14.0, v1],
+        ),
+        (
+            [[x0, y1, z1], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1]],
+            [3.0, 0.0, 11.0, 3.0],
+        ),
+        (
+            [[x1, y1, z0], [x1, y0, z0], [x0, y0, z0], [x0, y1, z0]],
+            [11.0, 0.0, 19.0, 3.0],
+        ),
+    ];
+    for (corners, uv) in faces {
+        let corners = corners.map(|p| {
+            matrix
+                .transform_point3(glam::Vec3::from_array(p) / 16.0)
+                .to_array()
+        });
+        let uv = [
+            uv[0] * 16.0 / 22.0,
+            uv[1] * 16.0 / 11.0,
+            uv[2] * 16.0 / 22.0,
+            uv[3] * 16.0 / 11.0,
+        ];
+        game.native_draw_quad(draw, sprite, corners, uv, 0xFFFFFF);
+    }
+}

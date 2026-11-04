@@ -5,9 +5,9 @@ name: Build and tests
 on:
   push:
     branches: [main]
-    paths-ignore: ['**/*.md', 'docs/**']
+    paths-ignore: ['**/*.md', 'docs/**', 'ports/horizon/**', '.github/workflows/horizon.yml']
   pull_request:
-    paths-ignore: ['**/*.md', 'docs/**']
+    paths-ignore: ['**/*.md', 'docs/**', 'ports/horizon/**', '.github/workflows/horizon.yml']
   workflow_dispatch:
     inputs:
       minecraft:

@@ -1,0 +1,73 @@
+name: Horizon Rust 26.3
+
+on:
+  push:
+    branches: [main, feat/horizon-rust]
+    paths: ['ports/horizon/**', '.github/workflows/horizon.yml']
+  pull_request:
+    paths: ['ports/horizon/**', '.github/workflows/horizon.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: horizon-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ports/horizon
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HORIZON_TELEMETRY_URL: off
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_DEV_INCREMENTAL: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: horizon-rust/horizon
+          ref: 67dad0d1a5adca139b426c8114e74a33b376ba64
+          path: ports/horizon/target/upstream
+      - uses: actions/checkout@v7
+        with:
+          repository: horizon-rust/horizon-mixins
+          ref: e8cd0aa38cffef49cb2e088ef716baa107148c02
+          path: ports/horizon/target/mixins-tool
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ports/horizon/target/mixins-tool
+            ports/horizon/target/game -> ../native-cargo
+          key: horizon-67dad0d
+      - name: Build the source transformation tool
+        run: cargo build --locked --manifest-path ports/horizon/target/mixins-tool/Cargo.toml -p horizon-mixins-cli
+      - name: Apply against the exact official 26.3 Nightly
+        run: python3 ports/horizon/tools/stage.py --horizon ports/horizon/target/upstream --mixins ports/horizon/target/mixins-tool
+      - name: Check the real modded game
+        working-directory: ports/horizon/target/game
+        run: cargo check --locked -p horizon-client --no-default-features --target-dir ../native-cargo
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: horizon-native-source-validation
+          path: |
+            ports/horizon/target/plan.json
+            ports/horizon/target/plan-report.json
+            ports/horizon/target/stage-report.json
