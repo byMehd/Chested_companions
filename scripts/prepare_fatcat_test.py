@@ -1,6 +1,8 @@
-"""Prepare a temporary Fat Cat rendering fixture without redistributing third-party assets.
+"""Prepare temporary model-pack rendering fixtures without redistributing third-party assets.
 
 Fat Cat 1.0 by PixalThePixeled: https://modrinth.com/resourcepack/fat-cat (CC BY-SA 4.0).
+Fresh Animations 1.11.2 by FreshLX: https://modrinth.com/resourcepack/fresh-animations.
+Its dedicated Minecraft 26 build includes the new kitten and pup models.
 Only its pack metadata is widened for testing; the model, animations and textures stay intact.
 EMF and ETF use pinned Modrinth releases for the selected Minecraft version.
 """
@@ -39,21 +41,27 @@ def download(version):
 
 def main():
     minecraft = sys.argv[1]
-    directory = Path("run") / f"fatcat-{minecraft}"
+    profile = sys.argv[2] if len(sys.argv) > 2 else "fatcat"
+    versions = VERSIONS[minecraft]
+    if profile not in ("fatcat", "freshanimations"):
+        raise ValueError(f"Unknown model pack: {profile}")
+    directory = Path("run") / f"{profile}-{minecraft}"
     dependencies = directory / "mods"
     dependencies.mkdir(parents=True, exist_ok=True)
-    for version in VERSIONS[minecraft]:
+    for version in versions:
         filename, data = download(version)
         (dependencies / filename).write_bytes(data)
 
-    _, pack = download("APZ38UeW")
+    pack_version = "APZ38UeW" if profile == "fatcat" else ("xfE3qfr5" if minecraft.startswith("26.") else "HC1XRKGD")
+    pack_filename = "fat-cat-test.zip" if profile == "fatcat" else "freshanimations-test.zip"
+    _, pack = download(pack_version)
     (directory / "resourcepacks").mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(BytesIO(pack)) as original, zipfile.ZipFile(
-        directory / "resourcepacks/fat-cat-test.zip", "w", zipfile.ZIP_DEFLATED
+        directory / "resourcepacks" / pack_filename, "w", zipfile.ZIP_DEFLATED
     ) as fixture:
         for entry in original.infolist():
             data = original.read(entry)
-            if entry.filename == "pack.mcmeta":
+            if entry.filename == "pack.mcmeta" and profile == "fatcat":
                 metadata = json.loads(data)
                 metadata["pack"].pop("pack_format", None)
                 metadata["pack"].pop("supported_formats", None)
@@ -61,9 +69,9 @@ def main():
                 data = json.dumps(metadata).encode()
             fixture.writestr(entry, data)
     (directory / "options.txt").write_text(
-        'resourcePacks:["vanilla","file/fat-cat-test.zip"]\nincompatibleResourcePacks:[]\n'
+        'resourcePacks:' + json.dumps(["vanilla", "file/" + pack_filename]) + '\nincompatibleResourcePacks:[]\n'
     )
-    print(f"Prepared Fat Cat 1.0 with EMF/ETF for Minecraft {minecraft}; test-only metadata adjustment")
+    print(f"Prepared {profile} with EMF/ETF for Minecraft {minecraft}; test-only metadata adjustment")
 
 
 if __name__ == "__main__":

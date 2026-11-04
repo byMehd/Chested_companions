@@ -29,7 +29,7 @@ on:
         description: Rendering profile (Fat Cat runs only its relevant client scenes)
         type: choice
         default: vanilla
-        options: [vanilla, fatcat]
+        options: [vanilla, fatcat, freshanimations]
 
 permissions:
   contents: read
@@ -98,7 +98,7 @@ jobs:
           if-no-files-found: ignore
 
   hidden-client:
-    if: inputs.checks != 'build' && inputs.visual != 'fatcat'
+    if: inputs.checks != 'build' && (inputs.visual == '' || inputs.visual == 'vanilla')
     name: Hidden Fabric ${{ matrix.mc }} / ${{ matrix.profile }}
     runs-on: ubuntu-latest
     env:
@@ -153,7 +153,7 @@ jobs:
           if-no-files-found: ignore
 
   server-scenarios:
-    if: inputs.checks != 'build' && inputs.visual != 'fatcat'
+    if: inputs.checks != 'build' && (inputs.visual == '' || inputs.visual == 'vanilla')
     name: Real server scenarios (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -192,7 +192,7 @@ jobs:
     name: Real client rendering (Fabric ${{ matrix.mc }})
     runs-on: ubuntu-latest
     env:
-      SCREENS_DIR: ${{ inputs.visual == 'fatcat' && format('fatcat-{0}', matrix.mc) || 'smoke-screens' }}
+      SCREENS_DIR: ${{ inputs.visual && inputs.visual != 'vanilla' && format('{0}-{1}', inputs.visual, matrix.mc) || 'smoke-screens' }}
       SDL_VIDEO_FORCE_EGL: ${{ matrix.mc == '26.3' && '1' || '0' }}
       SDL_VIDEODRIVER: x11
       LIBGL_ALWAYS_SOFTWARE: '1'
@@ -215,21 +215,21 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y libegl1 libegl-mesa0 libgl1-mesa-dri libglx-mesa0 mesa-utils
           ldconfig -p | grep -E 'lib(EGL|GLX|GL)\.so'
-      - name: Prepare Fat Cat with Entity Model Features and Entity Texture Features
-        if: inputs.visual == 'fatcat'
-        run: python3 scripts/prepare_fatcat_test.py '${{ matrix.mc }}'
+      - name: Prepare model pack with Entity Model Features and Entity Texture Features
+        if: inputs.visual && inputs.visual != 'vanilla'
+        run: python3 scripts/prepare_fatcat_test.py '${{ matrix.mc }}' '${{ inputs.visual }}'
       - name: Photograph every chest type on a cat and a wolf, sitting and baby pets, a golem visit and the remove-chest button
         shell: bash
         run: |
           chmod +x gradlew
           set -o pipefail
           echo "Runner: $(nproc) CPUs, $(free -m | awk '/Mem:/ {print $2}') MB RAM, load $(cut -d' ' -f1-3 /proc/loadavg)"
-          # On 2 November 2026 GitHub's shared runners stopped loading this software-rendered client's world in time
-          # ("Timeout loading world"), for every commit including one that had passed that morning, while the scenarios
-          # pass on a real machine. That alone only raises a warning; any other failure still fails the job.
+          # A rendering check passes only after the scenarios actually run and produce every expected image.
           arguments=(-PwithGameTest)
           if [[ '${{ inputs.visual }}' == fatcat ]]; then
-            arguments+=(-PwithFatCat "-PscreensDir=$SCREENS_DIR" -PscreensOnly=cats,sitting,baby)
+            arguments+=("-PvisualPack=${{ inputs.visual }}" "-PscreensDir=$SCREENS_DIR" -PscreensOnly=cats,sitting,baby,geometry)
+          elif [[ '${{ inputs.visual }}' == freshanimations ]]; then
+            arguments+=("-PvisualPack=${{ inputs.visual }}" "-PscreensDir=$SCREENS_DIR" -PscreensOnly=cats,wolves,sitting,baby,geometry)
           fi
           played=
           for attempt in 1 2; do
@@ -237,20 +237,17 @@ jobs:
             if xvfb-run -a ./gradlew :${{ matrix.mc }}-fabric:runSmokeScreens "${arguments[@]}" --console=plain | tee -a screenshots.log; then played=yes; break; fi
             echo "Attempt $attempt failed"
           done
-          if [ -z "$played" ]; then
-            if [[ '${{ inputs.visual }}' != fatcat ]] && grep -q "Timeout loading world" screenshots.log && ! grep -q "REVIVED_CLIENT_SCREENSHOTS_FAILED" screenshots.log; then
-              echo "::warning title=Real client scenarios not played::The runner could not load the world in time (Timeout loading world)."
-              exit 0
-            fi
-            exit 1
+          if [ -z "$played" ]; then exit 1; fi
+          if [[ '${{ inputs.visual }}' != vanilla && -n '${{ inputs.visual }}' ]]; then
+            python3 scripts/check_modelpack_geometry.py screenshots.log
           fi
-          expected=${{ inputs.visual == 'fatcat' && '38' || '67' }}
+          expected=${{ inputs.visual == 'fatcat' && '38' || inputs.visual == 'freshanimations' && '62' || '67' }}
           test "$(find "run/$SCREENS_DIR/screenshots" -maxdepth 1 -name '*.png' | wc -l)" -eq "$expected"
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: client-screenshots-${{ matrix.mc }}${{ inputs.visual == 'fatcat' && '-fatcat' || '' }}
+          name: client-screenshots-${{ matrix.mc }}${{ inputs.visual && inputs.visual != 'vanilla' && format('-{0}', inputs.visual) || '' }}
           path: |
             run/${{ env.SCREENS_DIR }}/screenshots/
             run/${{ env.SCREENS_DIR }}/logs/
