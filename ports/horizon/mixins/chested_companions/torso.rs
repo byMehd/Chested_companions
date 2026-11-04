@@ -24,7 +24,11 @@ fn measure(part: &Part, parent: Mat4, poses: &Poses, min: &mut Vec3, max: &mut V
     if !poses.skips(part) {
         for polygon in &part.polygons {
             for vertex in polygon.vertices {
-                let vertex = matrix.transform_point3(Vec3::new(vertex[0], vertex[1], vertex[2]));
+                // Polygon vertices are model pixels, whereas posed matrices
+                // translate in blocks. Return bounds in model pixels too.
+                let vertex = matrix
+                    .transform_point3(Vec3::new(vertex[0], vertex[1], vertex[2]) / 16.0)
+                    * 16.0;
                 *min = min.min(vertex);
                 *max = max.max(vertex);
             }
@@ -69,4 +73,35 @@ pub fn torso(mob: &Mob, partial: f32, data: &MobData, base: Mat4) -> Option<Tors
         return None;
     }
     Some(Torso { matrix, min, max })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mobs::Polygon;
+
+    #[test]
+    fn translated_pack_children_are_measured_in_the_same_units_as_the_body() {
+        let part = Part {
+            name: "custom_body".into(),
+            pose: [16.0, 8.0, -4.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            polygons: vec![Polygon {
+                normal: [0.0; 3],
+                vertices: [
+                    [0.0, 0.0, 0.0, 0.0, 0.0],
+                    [4.0, 0.0, 0.0, 0.0, 0.0],
+                    [4.0, 4.0, 4.0, 0.0, 0.0],
+                    [0.0, 4.0, 4.0, 0.0, 0.0],
+                ],
+                cull_back: false,
+            }],
+            children: vec![],
+        };
+        let poses = Poses::new(&part);
+        let mut min = Vec3::splat(f32::INFINITY);
+        let mut max = Vec3::splat(f32::NEG_INFINITY);
+        measure(&part, Mat4::IDENTITY, &poses, &mut min, &mut max);
+        assert_eq!(min, Vec3::new(16.0, 8.0, -4.0));
+        assert_eq!(max, Vec3::new(20.0, 12.0, 0.0));
+    }
 }

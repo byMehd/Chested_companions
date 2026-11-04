@@ -70,7 +70,7 @@ jobs:
         run: cargo check --locked -p horizon-client --no-default-features --target-dir ../native-cargo
       - name: Test native inventory persistence and synchronization
         working-directory: ports/horizon/target/game
-        run: cargo test --locked -p horizon-client --lib --no-default-features --target-dir ../native-cargo chested_companions
+        run: cargo test --locked -p horizon-client -p horizon-client-lib --lib --no-default-features --target-dir ../native-cargo chested_companions
       - name: Validate the native source and asset package
         run: |
           python3 ports/horizon/tools/package.py
