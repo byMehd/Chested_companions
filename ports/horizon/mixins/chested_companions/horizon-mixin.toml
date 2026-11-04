@@ -216,14 +216,6 @@ helper = "render-listened.rs"
 bindings = [{ name = "listened", ty = "&mut bool", value = "&mut *listened" }]
 
 [[injection]]
-id = "models"
-hook = "standalone_models"
-hook_version = 1
-kind = "HEAD"
-helper = "models.rs"
-bindings = [{ name = "models", ty = "&mut Vec<String>", value = "&mut *models" }]
-
-[[injection]]
 id = "interact"
 hook = "interact_entity"
 hook_version = 1

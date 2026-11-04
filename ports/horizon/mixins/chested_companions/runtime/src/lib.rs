@@ -202,24 +202,24 @@ impl Chest {
 
     pub fn texture(self) -> &'static str {
         match self {
-            Self::Wood => "chestedcompanions:chest/chest",
-            Self::Ender => "chestedcompanions:chest/special/ender",
+            Self::Wood => "chestedcompanions:gui/saddlebag/chest",
+            Self::Ender => "chestedcompanions:gui/saddlebag/ender",
             Self::Copper {
                 stage: Oxidation::Fresh,
                 ..
-            } => "chestedcompanions:chest/special/copper",
+            } => "chestedcompanions:gui/saddlebag/copper",
             Self::Copper {
                 stage: Oxidation::Exposed,
                 ..
-            } => "chestedcompanions:chest/special/copper_exposed",
+            } => "chestedcompanions:gui/saddlebag/copper_exposed",
             Self::Copper {
                 stage: Oxidation::Weathered,
                 ..
-            } => "chestedcompanions:chest/special/copper_weathered",
+            } => "chestedcompanions:gui/saddlebag/copper_weathered",
             Self::Copper {
                 stage: Oxidation::Oxidized,
                 ..
-            } => "chestedcompanions:chest/special/copper_oxidized",
+            } => "chestedcompanions:gui/saddlebag/copper_oxidized",
         }
     }
 }

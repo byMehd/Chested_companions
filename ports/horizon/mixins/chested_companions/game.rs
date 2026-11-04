@@ -459,7 +459,7 @@ impl Game<'_> {
             .map(|v| (center + rotation.transform_vector3(glam::Vec3::from_array(v))).to_array());
             self.native_draw_quad(
                 draw,
-                "chestedcompanions:chest_icon",
+                "chestedcompanions:gui/saddlebag/chest_icon",
                 corners,
                 [0.0, 0.0, 16.0, 16.0],
                 0xFFFFFF,

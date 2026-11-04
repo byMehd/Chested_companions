@@ -129,7 +129,7 @@ impl Game<'_> {
                 rgba(110, 110, 110, 255)
             },
         );
-        self.native_text(batch, "X", [x + 7.0, y + 6.0], 0xFFFFFF, true);
+        self.native_item(batch, "minecraft:chest", [x + 2.0, y + 2.0], 16.0);
         if over {
             self.native_text(
                 batch,
