@@ -52,17 +52,26 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: |
-            ports/horizon/target/mixins-tool
-            ports/horizon/target/game -> ../native-cargo
-          key: horizon-67dad0d
+          workspaces: ports/horizon/target/mixins-tool
+          key: mixins-e8cd0aa
+          cache-on-failure: true
       - name: Build the source transformation tool
         run: cargo build --locked --manifest-path ports/horizon/target/mixins-tool/Cargo.toml -p horizon-mixins-cli
       - name: Apply against the exact official 26.3 Nightly
         run: python3 ports/horizon/tools/stage.py --horizon ports/horizon/target/upstream --mixins ports/horizon/target/mixins-tool
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ports/horizon/target/game -> ../native-cargo
+          key: horizon-67dad0d
+          cache-on-failure: true
+          cache-workspace-crates: true
       - name: Check the real modded game
         working-directory: ports/horizon/target/game
         run: cargo check --locked -p horizon-client --no-default-features --target-dir ../native-cargo
+      - name: Validate the native source and asset package
+        run: |
+          python3 ports/horizon/tools/package.py
+          cargo run --locked --manifest-path ports/horizon/target/game/Cargo.toml -p cargo-horizon-mod --target-dir ports/horizon/target/native-cargo -- check ports/horizon/target/chested_companions-1.0.1+26.3.hmod --json
       - uses: actions/upload-artifact@v6
         if: always()
         with:

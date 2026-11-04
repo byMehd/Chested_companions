@@ -9,7 +9,45 @@ horizon_revision = "67dad0d1a5adca139b426c8114e74a33b376ba64"
 [[crate]]
 id = "runtime"
 path = "runtime"
-dependent = "horizon-client"
+dependent = "horizon-client-lib"
+
+[[module]]
+id = "core-api"
+file = "crates/horizon-client/src/client_lib.rs"
+name = "chested_companions_core"
+source = "core.rs"
+visibility = "pub"
+
+[[module]]
+id = "golems"
+file = "crates/horizon-client/src/mobs/transport_items.rs"
+name = "chested_companions"
+source = "golems.rs"
+visibility = "pub"
+
+[[injection]]
+id = "golem-start"
+target = "horizon_client_lib::mobs::transport_items::Transport::try_start"
+kind = "HEAD"
+cancellable = true
+helper = "golem-start.rs"
+bindings = [
+  { name = "transport", ty = "&mut Transport", value = "&mut *self" },
+  { name = "mob", ty = "&mut Mob", value = "&mut *m" },
+  { name = "cx", ty = "&mut Bx<'_, '_>", value = "&mut *cx" },
+]
+
+[[injection]]
+id = "golem-tick"
+target = "horizon_client_lib::mobs::transport_items::Transport::tick_or_stop"
+kind = "HEAD"
+cancellable = true
+helper = "golem-tick.rs"
+bindings = [
+  { name = "transport", ty = "&mut Transport", value = "&mut *self" },
+  { name = "mob", ty = "&mut Mob", value = "&mut *m" },
+  { name = "cx", ty = "&mut Bx<'_, '_>", value = "&mut *cx" },
+]
 
 [[module]]
 id = "game"
@@ -73,6 +111,67 @@ hook_version = 1
 kind = "HEAD"
 helper = "tick.rs"
 bindings = [{ name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" }]
+
+[[injection]]
+id = "prepare"
+hook = "level_tick_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "prepare.rs"
+bindings = [{ name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" }]
+
+[[injection]]
+id = "entity-listened"
+hook = "entity_tick_listened"
+hook_version = 1
+kind = "HEAD"
+helper = "render-listened.rs"
+bindings = [{ name = "listened", ty = "&mut bool", value = "&mut *listened" }]
+
+[[injection]]
+id = "hold-pre"
+hook = "entity_tick_pre"
+hook_version = 1
+kind = "HEAD"
+helper = "hold-pre.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "entity", ty = "u32", value = "entity" },
+  { name = "kind", ty = "&str", value = "kind" },
+]
+
+[[injection]]
+id = "hold-post"
+hook = "entity_tick_post"
+hook_version = 1
+kind = "HEAD"
+helper = "hold-post.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "entity", ty = "u32", value = "entity" },
+  { name = "kind", ty = "&str", value = "kind" },
+]
+
+[[injection]]
+id = "golem-open"
+target = "horizon_client::game::copper_golems::Game<'_>::golem_chest_open"
+kind = "HEAD"
+cancellable = true
+helper = "golem-open.rs"
+bindings = [{ name = "chest", ty = "[i32; 3]", value = "chest" }]
+
+[[injection]]
+id = "golem-slot"
+target = "horizon_client::game::copper_golems::Game<'_>::golem_chest_slot"
+kind = "HEAD"
+cancellable = true
+helper = "golem-slot.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "chest", ty = "[i32; 3]", value = "chest" },
+  { name = "slot", ty = "usize", value = "slot" },
+  { name = "stack", ty = "&Option<ItemStack>", value = "&stack" },
+]
 
 [[injection]]
 id = "store"

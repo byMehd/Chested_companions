@@ -396,6 +396,63 @@ pub fn lid_angle(openness: f32) -> f32 {
     (1.0 - (1.0 - openness.clamp(0.0, 1.0)).powi(3)) * std::f32::consts::FRAC_PI_2
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Visit {
+    travel: u16,
+    interaction: u8,
+    done: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VisitAction {
+    Walk,
+    Open,
+    Wait,
+    Sound,
+    Take,
+    CloseAndWalk,
+    Abort,
+}
+
+impl Visit {
+    pub fn is_open(&self) -> bool {
+        !self.done && self.interaction > 0
+    }
+
+    pub fn step(&mut self, distance_squared: f64) -> VisitAction {
+        if self.done || !distance_squared.is_finite() || distance_squared < 0.0 {
+            self.done = true;
+            return VisitAction::Abort;
+        }
+        if self.interaction > 0 && distance_squared > 4.0 {
+            self.interaction = 0;
+            self.travel = 0;
+            return VisitAction::CloseAndWalk;
+        }
+        if self.interaction == 0 {
+            if distance_squared > 1.0 {
+                self.travel += 1;
+                if self.travel > 600 {
+                    self.done = true;
+                    return VisitAction::Abort;
+                }
+                return VisitAction::Walk;
+            }
+            self.interaction = 1;
+            return VisitAction::Open;
+        }
+        self.interaction += 1;
+        match self.interaction {
+            9 => VisitAction::Sound,
+            60 => {
+                self.done = true;
+                VisitAction::Take
+            }
+            _ => VisitAction::Wait,
+        }
+    }
+}
+
 /// Offset in bag units needed to move even a buried hinge outside the posed torso.
 pub fn lid_clearance(hinge: f32, torso_half_width: f32, scale: f32) -> Option<f32> {
     if ![hinge, torso_half_width, scale]
@@ -412,6 +469,38 @@ pub fn lid_clearance(hinge: f32, torso_half_width: f32, scale: f32) -> Option<f3
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn golem_takes_once_after_sixty_interaction_ticks() {
+        let mut visit = Visit::default();
+        assert_eq!(visit.step(0.25), VisitAction::Open);
+        for _ in 2..9 {
+            assert_eq!(visit.step(0.25), VisitAction::Wait);
+        }
+        assert_eq!(visit.step(0.25), VisitAction::Sound);
+        for _ in 10..60 {
+            assert_eq!(visit.step(0.25), VisitAction::Wait);
+        }
+        assert_eq!(visit.step(0.25), VisitAction::Take);
+        assert!(!visit.is_open());
+        assert_eq!(visit.step(0.25), VisitAction::Abort);
+    }
+
+    #[test]
+    fn golem_abandons_an_unreachable_pet_and_reopens_after_chasing() {
+        let mut visit = Visit::default();
+        for _ in 0..600 {
+            assert_eq!(visit.step(16.0), VisitAction::Walk);
+        }
+        assert_eq!(visit.step(16.0), VisitAction::Abort);
+        let mut visit = Visit::default();
+        assert_eq!(visit.step(0.0), VisitAction::Open);
+        assert_eq!(visit.step(4.1), VisitAction::CloseAndWalk);
+        assert!(!visit.is_open());
+        assert_eq!(visit.step(2.0), VisitAction::Walk);
+        assert_eq!(visit.step(1.0), VisitAction::Open);
+        assert_eq!(visit.step(f64::NAN), VisitAction::Abort);
+    }
 
     #[test]
     fn accepts_only_the_ten_vanilla_chests() {

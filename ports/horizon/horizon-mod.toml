@@ -1,0 +1,8 @@
+id = "chested_companions"
+name = "Chested Companions: Revived"
+version = "1.0.1"
+description = "Portable inventories for tamed cats and wolves"
+authors = ["byMehd", "Khajiitos"]
+api = "0.2"
+side = "both"
+capabilities = []

@@ -1,7 +1,7 @@
 // Native adapters execute inside Horizon's game module. Persistent inventories
 // use Horizon attachments; ordinary menu clicks use its existing menu engine.
 use super::Game;
-use chested_companions_runtime::{Bag, Chest, Config, Pet};
+use horizon_client::chested_companions_core::{self as runtime, Bag, Chest, Config, Pet};
 use horizon_client::mod_api::{
     AttachmentCodec, AttachmentError, AttachmentType, Compound, Holder, Tag,
 };
@@ -27,6 +27,15 @@ static BAG: AttachmentType<Option<Bag<ItemStack>>> = AttachmentType {
         encode: encode_bag,
         decode: decode_bag,
     }),
+    copy_on_death: false,
+    sync: false,
+};
+
+static HOLD: AttachmentType<Option<[f64; 3]>> = AttachmentType {
+    namespace: "chestedcompanions",
+    name: "held_position",
+    default: || None,
+    codec: None,
     copy_on_death: false,
     sync: false,
 };
@@ -62,13 +71,13 @@ static VISUAL: AttachmentType<Visual> = AttachmentType {
             }
             c.insert("open".into(), Tag::Byte(i8::from(v.open)));
             c.insert("changed".into(), Tag::Long(v.changed));
-            c.insert("from".into(), Tag::Float(v.from));
+            c.insert("from".into(), Tag::Float(v.from.to_bits()));
             Ok(c)
         },
         decode: |c| {
             Ok(Visual {
                 chest: match c.get(&"chest".into()) {
-                    Some(Tag::String(s)) => Chest::from_item(&s.to_string()),
+                    Some(Tag::String(s)) => s.to_string().ok().and_then(|s| Chest::from_item(&s)),
                     _ => None,
                 },
                 open: matches!(c.get(&"open".into()), Some(Tag::Byte(1))),
@@ -77,7 +86,9 @@ static VISUAL: AttachmentType<Visual> = AttachmentType {
                     _ => 0,
                 },
                 from: match c.get(&"from".into()) {
-                    Some(Tag::Float(n)) if n.is_finite() => n.clamp(0.0, 1.0),
+                    Some(Tag::Float(n)) if f32::from_bits(*n).is_finite() => {
+                        f32::from_bits(*n).clamp(0.0, 1.0)
+                    }
                     _ => 0.0,
                 },
             })
@@ -176,6 +187,153 @@ pub fn configuration() -> Config {
 }
 
 impl Game<'_> {
+    fn cc_host(&mut self) -> &mut dyn horizon_client::mod_api::Host {
+        self
+    }
+
+    pub(super) fn cc_prepare(&mut self) {
+        if !self.native_authoritative() {
+            return;
+        }
+        let mut pets = Vec::new();
+        let config = configuration();
+        let ids: Vec<_> = self
+            .mobs
+            .iter()
+            .filter(|m| m.alive() && Pet::from_entity(&m.kind.id).is_some())
+            .map(|m| m.id)
+            .collect();
+        if config.copper_golems {
+            for id in ids {
+                self.cc_store((KEY_X, KEY_Y, id as i32));
+                let Ok(Some(bag)) = self.cc_bag(id) else {
+                    continue;
+                };
+                if !matches!(bag.chest, Chest::Copper { .. }) {
+                    continue;
+                }
+                let uuid = uuid(self.uuid_for(id));
+                let Some(mob) = self.mobs.iter().find(|m| m.id == id) else {
+                    continue;
+                };
+                let bounds = mob.bounds();
+                let (lo, hi) = (bounds.min_position(), bounds.max_position());
+                let position = [mob.position.x, mob.position.y, mob.position.z];
+                let key = (KEY_X, KEY_Y, id as i32);
+                self.world
+                    .block_entities
+                    .get_or_insert_with(key, || BlockEntity::Chest(bag.slots().to_vec()));
+                pets.push(
+                    horizon_client::mobs::transport_items::chested_companions::PetChest {
+                        id,
+                        uuid,
+                        position,
+                        bounds: [lo.x, lo.y, lo.z, hi.x, hi.y, hi.z],
+                        key: [key.0, key.1, key.2],
+                    },
+                );
+            }
+        }
+        let golems: Vec<_> = self
+            .mobs
+            .iter()
+            .filter(|m| m.alive() && &*m.kind.id == "minecraft:copper_golem")
+            .map(|m| m.id)
+            .collect();
+        horizon_client::mobs::transport_items::chested_companions::publish(
+            &self.world,
+            pets,
+            &golems,
+        );
+    }
+
+    fn cc_players(&mut self, id: u32) -> Vec<u128> {
+        let mut players: Vec<_> = self
+            .lan
+            .iter()
+            .flat_map(|host| host.hub.guests.iter())
+            .filter(|g| g.menu.as_ref().and_then(|m| m.pos).and_then(pet_key) == Some(id))
+            .map(|g| g.uuid)
+            .collect();
+        if self.container.and_then(pet_key) == Some(id) {
+            players.push(self.native_acting_id());
+        }
+        players
+    }
+
+    pub(super) fn cc_hold_pre(&mut self, id: u32, kind: &str) {
+        if Pet::from_entity(kind).is_none() || !matches!(self.cc_bag(id), Ok(Some(_))) {
+            return;
+        }
+        let mut openers = runtime::Openers::default();
+        for player in self.cc_players(id) {
+            openers.open_player(player);
+        }
+        for golem in
+            horizon_client::mobs::transport_items::chested_companions::open_golems(&self.world, id)
+        {
+            openers.open_golem(golem);
+        }
+        let now = self.world.game_time;
+        if horizon_client::mobs::transport_items::chested_companions::freezes(&self.world, id) {
+            openers.freeze(now, 10);
+        }
+        let Some(mob) = self.mobs.iter().find(|m| m.id == id) else {
+            return;
+        };
+        let position = openers
+            .keeps_still(
+                now,
+                mob.hurt_time > 0,
+                mob.fire_ticks > 0,
+                mob.fluids.in_water || mob.fluids.in_lava,
+            )
+            .then_some([mob.position.x, mob.position.y, mob.position.z]);
+        let _ = HOLD.set(self.cc_host(), Holder::Entity(id), position);
+    }
+
+    pub(super) fn cc_hold_post(&mut self, id: u32, kind: &str) {
+        if Pet::from_entity(kind).is_none() {
+            return;
+        }
+        let Ok(Some(Some(position))) = HOLD.get_existing(self.cc_host(), Holder::Entity(id)) else {
+            return;
+        };
+        if let Some(mob) = self.mobs.iter_mut().find(|m| m.id == id && m.alive())
+            && mob.hurt_time == 0
+            && mob.fire_ticks <= 0
+            && !mob.fluids.in_water
+            && !mob.fluids.in_lava
+        {
+            // Keep effects, gravity and ageing ticking; only horizontal walking waits.
+            mob.position.x = position[0];
+            mob.position.z = position[2];
+            mob.velocity.x = 0.0;
+            mob.velocity.z = 0.0;
+            mob.nav_stop();
+        }
+        let _ = HOLD.remove(self.cc_host(), Holder::Entity(id));
+    }
+
+    pub(super) fn cc_golem_slot(
+        &mut self,
+        chest: [i32; 3],
+        slot: usize,
+        stack: Option<ItemStack>,
+    ) -> bool {
+        let key = (chest[0], chest[1], chest[2]);
+        if pet_key(key).is_none() {
+            return false;
+        }
+        if let Some(BlockEntity::Chest(items)) = self.world.block_entities.get_mut(&key)
+            && let Some(item) = items.get_mut(slot)
+        {
+            *item = stack;
+        }
+        self.cc_store(key);
+        true
+    }
+
     pub(super) fn cc_draw(
         &self,
         render: &super::NativeMobRender<'_>,
@@ -231,9 +389,8 @@ impl Game<'_> {
                 0.75
             };
         let center = (torso.min + torso.max) * 0.5;
-        let angle = chested_companions_runtime::lid_angle(
-            visual.openness(draw.game_time as f64 + f64::from(draw.partial)),
-        );
+        let angle =
+            runtime::lid_angle(visual.openness(draw.game_time as f64 + f64::from(draw.partial)));
         let lid_height = 3.75 * scale;
         let top = torso.max.z + scale;
         let seam = top - lid_height;
@@ -262,14 +419,14 @@ impl Game<'_> {
     }
 
     fn cc_bag(&mut self, id: u32) -> Result<Option<Bag<ItemStack>>, AttachmentError> {
-        BAG.get_existing(self, Holder::Entity(id))
+        BAG.get_existing(self.cc_host(), Holder::Entity(id))
             .map(Option::flatten)
     }
 
     fn cc_visual(&mut self, id: u32, chest: Option<Chest>, open: bool) {
         let holder = Holder::Entity(id);
         let now = self.world.game_time;
-        let Ok(mut visual) = VISUAL.get(self, holder) else {
+        let Ok(mut visual) = VISUAL.get(self.cc_host(), holder) else {
             return;
         };
         if visual.chest != chest || visual.open != open {
@@ -277,7 +434,7 @@ impl Game<'_> {
             visual.chest = chest;
             visual.open = open;
             visual.changed = now;
-            if let Err(error) = VISUAL.set(self, holder, visual) {
+            if let Err(error) = VISUAL.set(self.cc_host(), holder, visual) {
                 log::error!("Chested Companions visual: {error:?}");
             }
         }
@@ -299,7 +456,7 @@ impl Game<'_> {
             return;
         }
         bag.slots_mut().clone_from_slice(&items);
-        if let Err(error) = BAG.set(self, Holder::Entity(id), Some(bag)) {
+        if let Err(error) = BAG.set(self.cc_host(), Holder::Entity(id), Some(bag)) {
             log::error!("Chested Companions save: {error:?}");
         }
     }
@@ -343,7 +500,13 @@ impl Game<'_> {
         }
         if config.feeding_priority
             && self.mobs[index].health < self.mobs[index].attrs.max_health
-            && stack.is_some_and(|s| self.mobs[index].kind.food.contains(&s.item))
+            && stack.is_some_and(|s| {
+                self.mobs[index]
+                    .kind
+                    .food
+                    .iter()
+                    .any(|item| item == s.item.as_ref())
+            })
         {
             return;
         }
@@ -365,7 +528,10 @@ impl Game<'_> {
                 if let Some((chest, consume)) = next {
                     bag.chest = chest;
                     bag.equipped.item = chest.item().into();
-                    if BAG.set(self, Holder::Entity(id), Some(bag)).is_err() {
+                    if BAG
+                        .set(self.cc_host(), Holder::Entity(id), Some(bag))
+                        .is_err()
+                    {
                         return;
                     }
                     if consume {
@@ -397,7 +563,10 @@ impl Game<'_> {
             let mut equipped = stack.clone();
             equipped.count = 1;
             let bag = Bag::new(chest, equipped, config.rows(pet, chest));
-            if BAG.set(self, Holder::Entity(id), Some(bag)).is_err() {
+            if BAG
+                .set(self.cc_host(), Holder::Entity(id), Some(bag))
+                .is_err()
+            {
                 return;
             }
             if !self.creative {
@@ -468,7 +637,7 @@ impl Game<'_> {
     pub(super) fn cc_remove(&mut self, id: u32) {
         self.cc_store((KEY_X, KEY_Y, id as i32));
         let Ok(mut bag) = self.cc_bag(id) else { return };
-        if BAG.set(self, Holder::Entity(id), None).is_err() {
+        if BAG.set(self.cc_host(), Holder::Entity(id), None).is_err() {
             return;
         }
         self.cc_visual(id, None, false);
@@ -479,7 +648,7 @@ impl Game<'_> {
             }
             self.world.block_entities.remove(&key);
         }
-        for stack in chested_companions_runtime::detach(&mut bag) {
+        for stack in runtime::detach(&mut bag) {
             self.cc_drop(id, stack);
         }
     }
@@ -569,15 +738,14 @@ impl Game<'_> {
             {
                 bag.chest = next;
                 bag.equipped.item = next.item().into();
-                let _ = BAG.set(self, Holder::Entity(id), Some(bag.clone()));
+                let _ = BAG.set(self.cc_host(), Holder::Entity(id), Some(bag.clone()));
             }
-            let open = self.container.and_then(pet_key) == Some(id)
-                || self.lan.as_ref().is_some_and(|host| {
-                    host.hub
-                        .guests
-                        .iter()
-                        .any(|g| g.menu.as_ref().and_then(|m| m.pos).and_then(pet_key) == Some(id))
-                });
+            let open = !self.cc_players(id).is_empty()
+                || !horizon_client::mobs::transport_items::chested_companions::open_golems(
+                    &self.world,
+                    id,
+                )
+                .is_empty();
             self.cc_visual(id, Some(bag.chest), open);
             if !open {
                 self.world.block_entities.remove(&(KEY_X, KEY_Y, id as i32));
