@@ -914,6 +914,7 @@ impl Game<'_> {
         Some(
             !guest.dead
                 && !guest.spectator()
+                && guest.dimension == self.dim.id()
                 && self.mobs.iter().find(|m| m.id == id).is_some_and(|m| {
                     m.alive()
                         && m.extra.tame
