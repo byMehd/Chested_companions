@@ -33,7 +33,7 @@ The mod is required on both client and server. Install exactly one JAR matching 
 | 26.2 | 25 | 0.18.4+ | 26.2.0.0-beta through 26.2.x | 65.0.0 through 65.x |
 | 26.3 | 25 | 0.19.3+ | 26.3.0.0-beta through 26.3.x | 66.0.0 through 66.x |
 
-Fabric bundles its required resource-loading API modules. NeoForge and Forge need no additional API. All versions remain **mod version 1.0.0**; this port does not include the separate 1.0.1 lid or Fat Cat changes.
+Fabric bundles its required resource-loading API modules. NeoForge and Forge need no additional API. **Mod version 1.0.1** includes open-lid z-fighting and Fat Cat kitten placement fixes on all supported Minecraft versions. The previously validated 1.0.0 ports remain available separately.
 
 Builds use the pinned versions of `gradle.properties` (Minecraft 1.21.11) and `versions/<minecraft>-<loader>/gradle.properties` (the others). The CI also checks the oldest declared versions. A range is not a guarantee about future loader releases; actual verification results are tracked in [docs/VALIDATION.md](docs/VALIDATION.md).
 
@@ -54,7 +54,7 @@ Every task name starts with the variant it runs on, `<minecraft>-<loader>`; with
 
 On Linux/macOS, use `./gradlew` with the same task names. `JAVA_HOME` should point to JDK 25; let Gradle detect JDK 21 or pass `-Porg.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64`.
 
-For a targeted remote check, dispatch **Build and tests** on GitHub with the Minecraft version, validation stage (`build`, `game` or `all`) and loader. Pushes and pull requests keep the complete matrix. The workflow only builds JARs and uploads artifacts; it does not publish to CurseForge.
+For a targeted remote check, dispatch **Build and tests** on GitHub with the Minecraft version, validation stage (`build`, `game` or `all`) and loader. The `fatcat` and `freshanimations` visual profiles use pinned EMF/ETF releases and the matching model pack, including Fresh Animations’ dedicated Minecraft 26 baby models. The runs require screenshots and verify the geometry submitted by the real renderer; third-party assets are downloaded for testing and are never bundled in the mod. Pushes and pull requests keep the complete matrix. The workflow only builds JARs and uploads artifacts; it does not publish to CurseForge.
 
 JARs are written to `versions/<minecraft>-<loader>/build/libs/`. Files ending in `-sources.jar` are source archives, not installable mods. For each pull request, GitHub Actions builds and unit tests every loader, plays Fabric client and server scenarios, starts the Forge GameTest server, and uploads the JARs and reports.
 

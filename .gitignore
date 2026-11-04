@@ -8,3 +8,7 @@ upstream/
 .idea/
 *.iml
 *.log
+
+# Local coding-agent worktrees and session files
+.claude/
+.codex/

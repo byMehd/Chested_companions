@@ -35,6 +35,35 @@ def side_planes(cube):
     return ()  # A rotated face cannot z-fight with an axis-aligned lid face over an area.
 
 
+def penetration(first, second):
+    # Separating-axis test on the actual posed cube corners, rather than their axis-aligned bounding boxes.
+    def points(cube):
+        return [cube["c"][offset:offset + 3] for offset in range(0, 24, 3)]
+    def sub(a, b):
+        return [a[i] - b[i] for i in range(3)]
+    def dot(a, b):
+        return sum(a[i] * b[i] for i in range(3))
+    def cross(a, b):
+        return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+    a, b = points(first), points(second)
+    edges_a = [sub(a[index], a[0]) for index in (1, 2, 4)]
+    edges_b = [sub(b[index], b[0]) for index in (1, 2, 4)]
+    axes = [cross(edges[i], edges[(i + 1) % 3]) for edges in (edges_a, edges_b) for i in range(3)]
+    axes.extend(cross(x, y) for x in edges_a for y in edges_b)
+    depth = math.inf
+    for axis in axes:
+        length = math.sqrt(dot(axis, axis))
+        if length < 0.00001:
+            continue
+        axis = [value / length for value in axis]
+        values_a, values_b = [dot(point, axis) for point in a], [dot(point, axis) for point in b]
+        overlap = min(max(values_a), max(values_b)) - max(min(values_a), min(values_b))
+        if overlap <= 0:
+            return 0.0
+        depth = min(depth, overlap)
+    return depth
+
+
 def main():
     rows = {}
     for line in Path(sys.argv[1]).read_text(errors="replace").splitlines():
@@ -63,7 +92,9 @@ def main():
                     intersection = math.prod(max(0, min(box[axis][1], other[axis][1])
                                                  - max(box[axis][0], other[axis][0])) for axis in range(3))
                     if intersection > 0.005:
-                        overlaps.add((scene, limb["path"], round(intersection, 3)))
+                        depth = penetration(chest, limb)
+                        if depth > 0.01:
+                            overlaps.add((scene, limb["path"], round(depth, 3)))
             if openness != 1.0 or not chest["path"].endswith("_lid"):
                 continue
             gap = box[0][1] - torso[0][1] if "left" in chest["path"] else torso[0][0] - box[0][0]
@@ -77,8 +108,8 @@ def main():
                     continue
                 if any(abs(a - b) < 0.004 for a in side_planes(chest) for b in side_planes(solid)):
                     problems.append(f"{scene} {chest['path']}: coplanar side face at {solid['path']}")
-    for scene, path, intersection in sorted(overlaps):
-        print(f"Attachment overlap to inspect: {scene}, {path}, bounding-box volume {intersection}")
+    for scene, path, depth in sorted(overlaps):
+        print(f"Attachment overlap to inspect: {scene}, {path}, posed-cube penetration {depth} model units")
     assert not problems, "\n".join(problems)
     print(f"MODEL_PACK_GEOMETRY_PASSED: 8 posed pets, both lids outside the torso, minimum gap {smallest_gap:.3f}")
 
