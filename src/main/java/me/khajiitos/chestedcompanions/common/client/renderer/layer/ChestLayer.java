@@ -106,8 +106,12 @@ public abstract class ChestLayer<T extends LivingEntityRenderState, M extends En
      * Keeps the plane an open lid stands in off the side of the torso, measured on the model as it is posed, whatever
      * the pet or the resource pack made of it: see {@link ChestBag#spreadToClear}.
      */
+    protected @Nullable PetTorso getTorso() {
+        return PetTorso.find(this.getParentModelBody(), this.getParentModel().root());
+    }
+
     private void keepLidsOffTheTorso(ModelPart chestModelPart) {
-        PetTorso torso = PetTorso.find(this.getParentModelBody());
+        PetTorso torso = this.getTorso();
         if (torso != null) keepLidsOffTheTorso(this.bags[0], chestModelPart, torso);
     }
 

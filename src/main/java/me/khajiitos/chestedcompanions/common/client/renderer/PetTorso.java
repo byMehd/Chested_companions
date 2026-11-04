@@ -25,15 +25,22 @@ import org.joml.Vector3f;
  * @param z         see {@code x}
  * @param length    longest side of the torso, which is 16 on the vanilla cat
  * @param halfWidth half of the logical extent across the pet, which is 2 on the vanilla cat
- * @param surfaceHalfWidth half of the drawn extent, including cube deformation (1.6 on the vanilla adult cat)
+ * @param surfaceHalfWidth half of the drawn extent, including cube deformation and the model root transform
  */
 public record PetTorso(float x, float y, float z, float length, float halfWidth, float surfaceHalfWidth) {
     private static final String[] ATTACHMENTS = {"head", "mane"};
 
     /** @return the torso found below {@code root}, or null when it holds no cube at all */
     public static @Nullable PetTorso find(ModelPart root) {
+        return find(root, root);
+    }
+
+    /** Includes the model root transform when the body is a direct child of that root. */
+    public static @Nullable PetTorso find(ModelPart body, ModelPart modelRoot) {
         Finder finder = new Finder();
-        root.visit(new PoseStack(), finder);
+        PoseStack pose = new PoseStack();
+        if (body != modelRoot) modelRoot.translateAndRotate(pose);
+        body.visit(pose, finder);
         return finder.torsoCandidate != null ? finder.torsoCandidate : finder.anywhere;
     }
 

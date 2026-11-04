@@ -250,15 +250,19 @@ class ChestBagTest {
     // Exercise the actual layer placement against baked vanilla models, without requiring accessor mixins in unit tests.
     private static final class CatLayer extends CatChestLayer {
         private final ModelPart body;
-        CatLayer(ModelPart body) { super(null); this.body = body; }
+        private final ModelPart root;
+        CatLayer(ModelPart root) { super(null); this.root = root; this.body = root.getChild("body"); }
         @Override protected ModelPart getParentModelBody() { return body; }
+        @Override protected PetTorso getTorso() { return PetTorso.find(body, root); }
         void place(CatRenderState state, ModelPart chest) { setupPosition(state, chest); }
     }
 
     private static final class WolfLayer extends WolfChestLayer {
         private final ModelPart body;
-        WolfLayer(ModelPart body) { super(null); this.body = body; }
+        private final ModelPart root;
+        WolfLayer(ModelPart root) { super(null); this.root = root; this.body = root.getChild("body"); }
         @Override protected ModelPart getParentModelBody() { return body; }
+        @Override protected PetTorso getTorso() { return PetTorso.find(body, root); }
         void place(WolfRenderState state, ModelPart chest) { setupPosition(state, chest); }
     }
 
@@ -292,11 +296,11 @@ class ChestBagTest {
                 WolfRenderState state = new WolfRenderState();
                 state.isBaby = pet.baby();
                 state.isSitting = pet.sitting();
-                new WolfLayer(body).place(state, chest);
+                new WolfLayer(root).place(state, chest);
             } else {
                 CatRenderState state = new CatRenderState();
                 state.isBaby = pet.baby();
-                new CatLayer(body).place(state, chest);
+                new CatLayer(root).place(state, chest);
             }
             float placedZ = chest.getChild("left_body").z;
             List<float[]> model = posedBoxes(root, "");
@@ -307,7 +311,7 @@ class ChestBagTest {
                 assertEquals(0.0F, before, 1.0E-4F, pet.name() + ": the open lid lies on the side of the torso");
             }
 
-            ChestLayer.keepLidsOffTheTorso(left, chest, PetTorso.find(body));
+            ChestLayer.keepLidsOffTheTorso(left, chest, PetTorso.find(body, root));
             float after = closestSidePlane(posedBoxes(chest, "_lid"), model);
             assertTrue(after >= 0.05F, pet.name() + ": the open lid is " + after + " from a side plane of the model");
             float moved = (chest.getChild("left_body").z - placedZ) * chest.zScale;

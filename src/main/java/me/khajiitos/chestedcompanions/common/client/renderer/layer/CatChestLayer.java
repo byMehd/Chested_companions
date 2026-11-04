@@ -76,7 +76,7 @@ public class CatChestLayer extends ChestLayer<CatRenderState, EntityModel<CatRen
 
         boolean rebuilt = isRebuilt(catBody);
         boolean vanillaBaby = OWN_BABY_MODEL && catRenderState.isBaby && !rebuilt;
-        PetTorso torso = rebuilt || vanillaBaby ? PetTorso.find(catBody) : null;
+        PetTorso torso = rebuilt || vanillaBaby ? this.getTorso() : null;
         if (torso != null) {
             // Keep the vanilla layout, but measured from the real torso: a baby, a fat or a rebuilt cat follows.
             float size = Mth.clamp(torso.length() / TORSO_LENGTH, 0.25F, 4.0F);

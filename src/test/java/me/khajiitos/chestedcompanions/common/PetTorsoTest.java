@@ -62,7 +62,7 @@ class PetTorsoTest {
         assertEquals(1.0F, torso.z(), 1.0E-4F);
         assertEquals(16.0F, torso.length(), 1.0E-4F);
         assertEquals(2.0F, torso.halfWidth(), 1.0E-4F);
-        assertEquals(1.6F, torso.surfaceHalfWidth(), 1.0E-4F);
+        assertEquals(2.0F, torso.surfaceHalfWidth(), 1.0E-4F);
         // The chest part of the vanilla layout (body + 2 down) is the same point as the one measured from the torso.
         assertEquals(body.y + 2.0F, torso.y() - 3.0F, 1.0E-4F);
         assertEquals(body.z, torso.z() - 11.0F, 1.0E-4F);
@@ -178,6 +178,16 @@ class PetTorsoTest {
         ModelPart leg = part(0, 0, 0, 0, List.of(cube(-1, -2, -1, 2, 4, 2)), Map.of());
         ModelPart root = part(0, 0, 0, 0, List.of(), Map.of("overhead_body", torso, "leg", leg));
         assertEquals(14.0F, PetTorso.find(root).length(), 1.0E-4F);
+    }
+
+    @Test void theModelRootScaleIsIncludedInTheDrawnTorso() {
+        ModelPart body = vanillaBody(false);
+        ModelPart root = part(0, 0, 0, 0, List.of(), Map.of("body", body));
+        root.xScale = root.yScale = root.zScale = 0.8F;
+        PetTorso torso = PetTorso.find(body, root);
+        assertNotNull(torso);
+        assertEquals(1.6F, torso.surfaceHalfWidth(), 1.0E-4F);
+        assertEquals(12.8F, torso.length(), 1.0E-4F);
     }
 
     @Test void aFreshAnimationsManeIsNotTakenForTheWolfTorso() {

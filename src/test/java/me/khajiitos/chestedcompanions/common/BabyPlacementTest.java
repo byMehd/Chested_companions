@@ -51,7 +51,7 @@ class BabyPlacementTest {
             ChestBag right = new ChestBag(this.positionRightChestCube(), true, 0, 0, 22, 11);
             ModelPart chest = openChest(left, right);
             this.setupPosition(state, chest);
-            keepLidsOffTheTorso(left, chest, PetTorso.find(this.getParentModelBody()));
+            keepLidsOffTheTorso(left, chest, this.getTorso());
             return chest;
         }
     }
@@ -75,7 +75,7 @@ class BabyPlacementTest {
             ChestBag right = new ChestBag(this.positionRightChestCube(), true, 0, 0, 22, 11);
             ModelPart chest = openChest(left, right);
             this.setupPosition(state, chest);
-            keepLidsOffTheTorso(left, chest, PetTorso.find(this.getParentModelBody()));
+            keepLidsOffTheTorso(left, chest, this.getTorso());
             return chest;
         }
     }
@@ -106,7 +106,7 @@ class BabyPlacementTest {
     }
 
     private static void assertBagsHangOutsideTheTorso(ModelPart root, ModelPart chest) {
-        PetTorso torso = PetTorso.find(root.getChild("body"));
+        PetTorso torso = PetTorso.find(root.getChild("body"), root);
         assertNotNull(torso);
         Map<String, float[]> across = acrossThePet(chest);
 
