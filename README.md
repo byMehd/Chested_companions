@@ -15,7 +15,7 @@ Original code, artwork and translations are distributed under the original [MIT 
 - Owner-only access by default; optional public access, inverted crouch interaction, feeding priority, baby restrictions and per-animal toggles.
 - **Remove a chest** with the button beside the pet's chest screen (a vanilla button showing a crossed-out chest), or with shears (right-click the pet). The chest and everything in it drop to the ground, exactly once, in every game mode. Contents also drop when the pet dies.
 - **Ender chests:** access the opening player's actual vanilla Ender inventory (27 slots). Public access still shows each viewer their own inventory. Ender contents never belong to the pet and do not drop when it dies or loses its chest. The pet displays a compact Ender saddlebag texture.
-- **Model packs.** The saddlebags are anchored to the torso that is actually drawn, so packs that rebuild the cat with Entity Model Features (Fresh Animations, Better Cats...) keep them on its back, standing, sitting and as a kitten. Checked with Fresh Animations 1.11.2 on EMF 3.3.12 and ETF 7.2.6, alone and together with Sodium, Iris, Entity Culling and ImmediatelyFast. Fat Cat 1.0 is refused by Minecraft 1.21.11 as published (its `pack.mcmeta` lacks the new format fields); with that file patched, adult cats carry their bags correctly.
+- **Model packs.** Saddlebags follow the torso actually drawn by Entity Model Features. Version 1.0.1 checks Fresh Animations 1.11.2 and Fat Cat 1.0 with EMF 3.3.12 and ETF 7.2.7, including standing, sitting and baby pets. Some animated paws can still touch the bags. Fat Cat needs updated pack metadata on modern Minecraft; its models and textures are unchanged in the test copy. See [docs/VALIDATION.md](docs/VALIDATION.md) for versions, results and limits.
 - Preserve all eleven original **More Chest Variants** textures and add pale oak support through the installed mod's texture.
 - Optional Cloth Config screens and Fabric Mod Menu integration; optional chest icons and hiding chest models.
 - Preserve original entity save keys and datapack/resource namespaces. Import a legacy `chestedcompanions.json` without modifying it.
@@ -33,7 +33,7 @@ The mod is required on both client and server. Install exactly one JAR matching 
 | 26.2 | 25 | 0.18.4+ | 26.2.0.0-beta through 26.2.x | 65.0.0 through 65.x |
 | 26.3 | 25 | 0.19.3+ | 26.3.0.0-beta through 26.3.x | 66.0.0 through 66.x |
 
-Fabric bundles its required resource-loading API modules. NeoForge and Forge need no additional API. **Mod version 1.0.1** includes open-lid z-fighting and Fat Cat kitten placement fixes on all supported Minecraft versions. The previously validated 1.0.0 ports remain available separately.
+Fabric bundles its required resource-loading API modules. NeoForge and Forge need no additional API. **Mod version 1.0.1** includes open-lid z-fighting and Fat Cat kitten placement fixes on all supported Minecraft versions. The published 1.0.0 files remain unchanged; new releases use 1.0.1.
 
 Builds use the pinned versions of `gradle.properties` (Minecraft 1.21.11) and `versions/<minecraft>-<loader>/gradle.properties` (the others). The CI also checks the oldest declared versions. A range is not a guarantee about future loader releases; actual verification results are tracked in [docs/VALIDATION.md](docs/VALIDATION.md).
 
@@ -54,7 +54,7 @@ Every task name starts with the variant it runs on, `<minecraft>-<loader>`; with
 
 On Linux/macOS, use `./gradlew` with the same task names. `JAVA_HOME` should point to JDK 25; let Gradle detect JDK 21 or pass `-Porg.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64`.
 
-For a targeted remote check, dispatch **Build and tests** on GitHub with the Minecraft version, validation stage (`build`, `game` or `all`) and loader. The `fatcat` and `freshanimations` visual profiles use pinned EMF/ETF releases and the matching model pack, including Fresh Animations’ dedicated Minecraft 26 baby models. The runs require screenshots and verify the geometry submitted by the real renderer; third-party assets are downloaded for testing and are never bundled in the mod. Pushes and pull requests keep the complete matrix. The workflow only builds JARs and uploads artifacts; it does not publish to CurseForge.
+For a targeted remote check, dispatch **Build and tests** on GitHub with the Minecraft version, validation stage (`build`, `game` or `all`) and loader. The `fatcat` and `freshanimations` visual profiles use pinned EMF/ETF releases and the matching model pack, including Fresh Animations' dedicated Minecraft 26 baby models. The runs require screenshots and verify the geometry submitted by the real renderer; third-party assets are downloaded for testing and are never bundled in the mod. Pushes and pull requests keep the complete matrix. The workflow only builds JARs and uploads artifacts; it does not publish to CurseForge.
 
 JARs are written to `versions/<minecraft>-<loader>/build/libs/`. Files ending in `-sources.jar` are source archives, not installable mods. For each pull request, GitHub Actions builds and unit tests every loader, plays Fabric client and server scenarios, starts the Forge GameTest server, and uploads the JARs and reports.
 
@@ -72,7 +72,7 @@ To look at a third-party combination, put the mods in `run/<name>/mods`, the res
 
 `settings.gradle.kts` declares the Minecraft/loader variants. `stonecutter.gradle.kts` selects the active project and supplies loader constants. Shared logic and assets are in `src/main`; entrypoints and metadata are in `loaders/<loader>`. Each loader has its own build script.
 
-The source is written for the newest version (1.21.11); the other versions are generated from it at build time. `stonecutter.gradle.kts` renames what 1.21.11 renamed or moved (`Identifier`, the cat, the copper golem, the game rules, a few models), and the few places where behaviour differs are `//? if >=1.21.11` conditions. What `src/` does not hold is not processed: the loader entrypoints and the NeoForge test must stay version-neutral.
+The active source variant is Minecraft 1.21.11; Stonecutter generates the other variants at build time, including Minecraft 26. `stonecutter.gradle.kts` renames what 1.21.11 renamed or moved (`Identifier`, the cat, the copper golem, the game rules, a few models), and the few places where behaviour differs are `//? if >=1.21.11` conditions. What `src/` does not hold is not processed: the loader entrypoints and the NeoForge test must stay version-neutral.
 
 For example, select the NeoForge development variant with the command below. It rewrites `src/` for that variant; select `1.21.11-fabric` again before committing.
 

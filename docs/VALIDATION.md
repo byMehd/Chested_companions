@@ -31,7 +31,7 @@ Minecraft 26 uses Java 25 and unobfuscated toolchains. Its tests initialize item
 
 The kitten and pup models introduced in Minecraft 26 have wider torsos than scaled adult models. Tests place the actual layers on baked standing and sitting baby models and verify both flanks. The model root transform and drawn cube vertices are included in clearance measurements. A buried lid is moved outside the torso, rather than only avoiding coincident surfaces.
 
-Torso selection excludes named heads and manes when a body candidate exists. This prevents a Fat Cat kitten’s enlarged head, or Fresh Animations’ wolf mane, from becoming the bag anchor. Head-only or unnamed models retain a fallback. The closed bag’s geometry and existing chest textures are preserved.
+Torso selection excludes named heads and manes when a body candidate exists. This prevents a Fat Cat kitten's enlarged head, or Fresh Animations' wolf mane, from becoming the bag anchor. Head-only or unnamed models retain a fallback. The closed bag's geometry and existing chest textures are preserved.
 
 The manual `fatcat` profile requires **38 screenshots**. The `freshanimations` profile requires **62 screenshots**, using its dedicated 26.x pack on Minecraft 26 and its legacy pack on 1.21. Each also samples the real renderer for eight combinations of animal, age and sitting pose, with lids closed and open. `check_modelpack_geometry.py` checks visible outer lid faces against the drawn torso and rejects overlapping coplanar side faces. Paw contacts are inspected separately with a separating-axis test on posed cubes; they are not mistaken for lid z-fighting.
 
@@ -39,11 +39,11 @@ Fresh Animations checks passed on [26.1.2](https://github.com/byMehd/Chested_com
 
 [Fresh Animations 26.3 run 41748246622](https://github.com/byMehd/Chested_companions/actions/runs/41748246622) produced all 62 images and passed the posed-geometry checks, with a minimum outer-face clearance of 0.063 model units. The same run passed both Fabric builds; [1.21.11 build checks](https://github.com/byMehd/Chested_companions/actions/runs/41748250427) passed on its minimum and current loader.
 
-Fat Cat 1.0 by PixalThePixeled is [CC BY-SA 4.0](https://modrinth.com/resourcepack/fat-cat). Its published metadata is too old for current Minecraft, so only the test copy’s pack metadata is adjusted. Fresh Animations 1.11.2 by FreshLX is downloaded from its [official project](https://modrinth.com/resourcepack/fresh-animations) without changing its models or textures. Pinned EMF/ETF versions and checksum validation are in the preparation script. No third-party pack or mod binary is committed or distributed with this mod.
+Fat Cat 1.0 by PixalThePixeled is [CC BY-SA 4.0](https://modrinth.com/resourcepack/fat-cat). Its published metadata is too old for current Minecraft, so only the test copy's pack metadata is adjusted. Fresh Animations 1.11.2 by FreshLX is downloaded from its [official project](https://modrinth.com/resourcepack/fresh-animations) without changing its models or textures. Pinned EMF/ETF versions and checksum validation are in the preparation script. No third-party pack or mod binary is committed or distributed with this mod.
 
 ## Limits
 
-Fresh Animations may move a paw into a saddlebag during some animations. One standing adult wolf pose showed a small hind-paw contact; the tested baby pose did not have a solid-body intersection. Avoiding all moving-limb contacts would require moving bags away from the animal or changing the pack’s animation. This remains a cosmetic limitation, distinct from a hidden lid or z-fighting.
+Fresh Animations may move a paw into a saddlebag during some animations. One standing adult wolf pose showed a small hind-paw contact; the tested baby pose did not have a solid-body intersection. Avoiding all moving-limb contacts would require moving bags away from the animal or changing the pack's animation. This remains a cosmetic limitation, distinct from a hidden lid or z-fighting.
 
 Graphical checks use Fabric clients. Real Forge/NeoForge clients, multiplayer under every rendering combination, shaders, OptiFine, Cat Loaf, MiniMePets and Eternal Pets snapshot restoration are not claimed verified. The shared rendering source and loader-specific builds do not substitute for those tests.
 
