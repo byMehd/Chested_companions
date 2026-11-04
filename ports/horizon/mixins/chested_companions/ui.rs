@@ -213,7 +213,7 @@ impl Game<'_> {
                     && self.cc_guest_valid(guest) == Some(true)
             });
         if valid {
-            self.cc_remove(id);
+            self.cc_remove_by_player(id);
         }
     }
 }

@@ -474,9 +474,36 @@ pub fn lid_clearance(hinge: f32, torso_half_width: f32, scale: f32) -> Option<f3
     Some(((torso_half_width + 0.3 * scale - hinge.abs()) / scale).max(0.0))
 }
 
+pub fn swept_lid_clearance(height: f32, angle: f32, scale: f32) -> Option<f32> {
+    if ![height, angle, scale].iter().all(|v| v.is_finite()) || height < 0.0 || scale <= 0.0 {
+        return None;
+    }
+    Some(0.3 * scale + height * angle.clamp(0.0, std::f32::consts::FRAC_PI_2).sin())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_entire_rotating_lid_slab_stays_outside_the_torso() {
+        for scale in [0.125, 0.5, 0.65, 0.75, 1.0, 4.0] {
+            for step in 0..=90 {
+                let angle = (step as f32).to_radians();
+                let spread = swept_lid_clearance(3.75 * scale, angle, scale).unwrap();
+                for x in [0.0, 5.0 * scale] {
+                    for z in [0.0, 3.75 * scale] {
+                        let rotated_x = spread + x * angle.cos() - z * angle.sin();
+                        assert!(
+                            rotated_x >= 0.3 * scale - 1e-5,
+                            "scale={scale}, angle={step}, x={x}, z={z}"
+                        );
+                    }
+                }
+            }
+        }
+        assert_eq!(swept_lid_clearance(1.0, f32::NAN, 1.0), None);
+    }
 
     #[test]
     fn golem_takes_once_after_sixty_interaction_ticks() {

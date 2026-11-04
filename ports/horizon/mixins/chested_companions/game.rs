@@ -136,6 +136,45 @@ fn decode_bag(c: &Compound) -> Result<Option<Bag<ItemStack>>, AttachmentError> {
     Ok(Some(bag))
 }
 
+fn legacy_bag(tag: &Tag, rows: u8) -> Result<Option<Bag<ItemStack>>, AttachmentError> {
+    let equipped = if let Some(item) = tag.get("ChestItem") {
+        item_from_nbt(item).ok_or(AttachmentError::Decode)?
+    } else if matches!(tag.get("HasChest"), Some(Tag::Byte(1))) {
+        ItemStack {
+            item: "minecraft:chest".into(),
+            count: 1,
+            damage: 0,
+            extra: None,
+        }
+    } else {
+        return Ok(None);
+    };
+    let chest = Chest::from_item(&equipped.item).ok_or(AttachmentError::Decode)?;
+    if equipped.count != 1 {
+        return Err(AttachmentError::Decode);
+    }
+    let mut size = usize::from(rows.clamp(1, 3)) * 9;
+    if chest != Chest::Ender
+        && let Some(Tag::List(items)) = tag.get("CCItems")
+    {
+        let mut seen = std::collections::BTreeSet::new();
+        for item in items {
+            let slot = match item.get("Slot") {
+                Some(Tag::Byte(n)) if (0..27).contains(n) => *n as usize,
+                _ => return Err(AttachmentError::Decode),
+            };
+            if !seen.insert(slot) || item_from_nbt(item).is_none() {
+                return Err(AttachmentError::Decode);
+            }
+            size = size.max((slot / 9 + 1) * 9);
+        }
+    }
+    let mut bag = Bag::new(chest, equipped, (size / 9) as u8);
+    let loaded = decode_items(tag.get("CCItems"), bag.slots().len());
+    bag.slots_mut().clone_from_slice(&loaded);
+    Ok(Some(bag))
+}
+
 fn uuid(words: [i32; 4]) -> u128 {
     words
         .into_iter()
@@ -340,8 +379,11 @@ impl Game<'_> {
             && !mob.fluids.in_lava
         {
             // Keep effects, gravity and ageing ticking; only horizontal walking waits.
-            mob.position.x = position[0];
-            mob.position.z = position[2];
+            if (mob.position.x - position[0]).powi(2) + (mob.position.z - position[2]).powi(2) < 4.0
+            {
+                mob.position.x = position[0];
+                mob.position.z = position[2];
+            }
             mob.velocity.x = 0.0;
             mob.velocity.z = 0.0;
             mob.nav_stop();
@@ -465,7 +507,7 @@ impl Game<'_> {
         let seam = top - lid_height;
         // At every angle the complete lid slab, rather than just its hinge
         // plane, clears the visible torso. Closed bags sit against the flank.
-        let spread = 0.3 * scale + lid_height * angle.sin();
+        let spread = runtime::swept_lid_clearance(lid_height, angle, scale).unwrap_or(0.3 * scale);
         for side in [-1.0_f32, 1.0] {
             let hinge = if side < 0.0 {
                 torso.min.x - spread
@@ -488,8 +530,19 @@ impl Game<'_> {
     }
 
     fn cc_bag(&mut self, id: u32) -> Result<Option<Bag<ItemStack>>, AttachmentError> {
-        BAG.get_existing(self.cc_host(), Holder::Entity(id))
-            .map(Option::flatten)
+        // A stored None is a tombstone: old Java ChestItem fields must never
+        // resurrect an inventory after removal or death.
+        if let Some(bag) = BAG.get_existing(self.cc_host(), Holder::Entity(id))? {
+            return Ok(bag);
+        }
+        let Some(raw) = self.persist.raw.get(&id).cloned() else {
+            return Ok(None);
+        };
+        let bag = legacy_bag(&raw, 1)?;
+        if bag.is_some() {
+            BAG.set(self.cc_host(), Holder::Entity(id), bag.clone())?;
+        }
+        Ok(bag)
     }
 
     fn cc_visual(&mut self, id: u32, chest: Option<Chest>, open: bool) {
@@ -617,8 +670,9 @@ impl Game<'_> {
         let Ok(bag) = self.cc_bag(id) else { return };
         if let Some(mut bag) = bag {
             if stack.is_some_and(|s| &*s.item == "minecraft:shears") {
-                self.damage_held(1);
-                self.cc_remove(id);
+                if self.cc_remove_by_player(id) {
+                    self.damage_held(1);
+                }
             } else {
                 let next = stack.and_then(|s| {
                     if &*s.item == "minecraft:honeycomb" {
@@ -630,6 +684,7 @@ impl Game<'_> {
                     }
                 });
                 if let Some((chest, consume)) = next {
+                    let waxed = matches!(bag.chest, Chest::Copper { waxed: true, .. });
                     bag.chest = chest;
                     bag.equipped.item = chest.item().into();
                     if BAG
@@ -643,10 +698,29 @@ impl Game<'_> {
                     } else {
                         self.damage_held(1);
                     }
-                    self.cc_visual(id, Some(chest), false);
+                    let open = VISUAL
+                        .get_existing(self.cc_host(), Holder::Entity(id))
+                        .ok()
+                        .flatten()
+                        .is_some_and(|v| v.open);
+                    self.cc_visual(id, Some(chest), open);
+                    let p = self.mobs[index].position;
+                    self.level_event_at(
+                        if consume {
+                            3003
+                        } else if waxed {
+                            3004
+                        } else {
+                            3005
+                        },
+                        [p.x.floor() as i32, p.y.floor() as i32, p.z.floor() as i32],
+                        0,
+                    );
                     self.audio.play(
                         if consume {
                             "minecraft:item.honeycomb.wax_on"
+                        } else if waxed {
+                            "minecraft:item.axe.wax_off"
                         } else {
                             "minecraft:item.axe.scrape"
                         },
@@ -739,11 +813,16 @@ impl Game<'_> {
         }
     }
 
-    pub(super) fn cc_remove(&mut self, id: u32) {
+    pub(super) fn cc_remove(&mut self, id: u32) -> bool {
         self.cc_store((KEY_X, KEY_Y, id as i32));
-        let Ok(mut bag) = self.cc_bag(id) else { return };
+        let Ok(mut bag) = self.cc_bag(id) else {
+            return false;
+        };
+        if bag.is_none() {
+            return false;
+        }
         if BAG.set(self.cc_host(), Holder::Entity(id), None).is_err() {
-            return;
+            return false;
         }
         self.cc_visual(id, None, false);
         for x in [KEY_X, ENDER_X] {
@@ -756,6 +835,17 @@ impl Game<'_> {
         for stack in runtime::detach(&mut bag) {
             self.cc_drop(id, stack);
         }
+        true
+    }
+
+    pub(super) fn cc_remove_by_player(&mut self, id: u32) -> bool {
+        let at = self.mobs.iter().find(|m| m.id == id).map(|m| m.center());
+        let removed = self.cc_remove(id);
+        if removed {
+            self.audio
+                .play("minecraft:entity.donkey.chest", at, 1.0, 1.5);
+        }
+        removed
     }
 
     pub(super) fn cc_remove_local(&mut self, id: u32) {
@@ -777,7 +867,7 @@ impl Game<'_> {
         {
             return;
         }
-        self.cc_remove(id);
+        self.cc_remove_by_player(id);
     }
 
     pub(super) fn cc_open_guest(
@@ -869,8 +959,10 @@ impl Game<'_> {
             }
             // RandomTickSpeed is read from the authoritative world's gamerules.
             let speed = self.level.game_rule("random_tick_speed");
+            let probability = bag.chest.aging_probability(speed);
             if self.native_on("chested_companions")
-                && f64::from(self.world.random.next_float()) < bag.chest.aging_probability(speed)
+                && probability > 0.0
+                && f64::from(self.world.random.next_float()) < probability
                 && let Some(next) = bag.chest.next()
             {
                 bag.chest = next;
@@ -949,6 +1041,47 @@ fn draw_bag_box(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn java_save_migration_keeps_items_beyond_the_current_configured_capacity() {
+        let saved = Tag::compound([
+            ("HasChest", Tag::Byte(1)),
+            (
+                "CCItems",
+                Tag::List(vec![Tag::compound([
+                    ("Slot", Tag::Byte(26)),
+                    ("id", Tag::String("minecraft:diamond".into())),
+                    ("count", Tag::Int(37)),
+                ])]),
+            ),
+        ]);
+        let bag = legacy_bag(&saved, 1).unwrap().unwrap();
+        assert_eq!(bag.slots().len(), 27);
+        assert_eq!(bag.slots()[26].as_ref().unwrap().count, 37);
+        assert!(bag.slots()[0].is_none());
+        let tombstone = encode_bag(&None).unwrap();
+        assert!(decode_bag(&tombstone).unwrap().is_none());
+    }
+
+    #[test]
+    fn malformed_java_slots_and_unsupported_chests_are_preserved_as_errors() {
+        let invalid = Tag::compound([
+            ("HasChest", Tag::Byte(1)),
+            (
+                "CCItems",
+                Tag::List(vec![Tag::compound([
+                    ("Slot", Tag::Byte(27)),
+                    ("id", Tag::String("minecraft:diamond".into())),
+                ])]),
+            ),
+        ]);
+        assert!(legacy_bag(&invalid, 1).is_err());
+        let unsupported = Tag::compound([(
+            "ChestItem",
+            Tag::compound([("id", Tag::String("lolmcv:oak_chest".into()))]),
+        )]);
+        assert!(legacy_bag(&unsupported, 1).is_err());
+    }
 
     #[test]
     fn bag_codec_keeps_slot_numbers_and_item_components() {

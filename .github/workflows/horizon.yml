@@ -83,3 +83,50 @@ jobs:
             ports/horizon/target/plan.json
             ports/horizon/target/plan-report.json
             ports/horizon/target/stage-report.json
+            ports/horizon/target/chested_companions-1.0.1+26.3.hmod
+
+  windows:
+    needs: [runtime, native]
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      HORIZON_TELEMETRY_URL: off
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: horizon-rust/horizon
+          ref: 67dad0d1a5adca139b426c8114e74a33b376ba64
+          path: ports/horizon/target/upstream
+      - uses: actions/checkout@v7
+        with:
+          repository: horizon-rust/horizon-mixins
+          ref: e8cd0aa38cffef49cb2e088ef716baa107148c02
+          path: ports/horizon/target/mixins-tool
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ports/horizon/target/mixins-tool
+          key: mixins-e8cd0aa
+          cache-on-failure: true
+      - name: Build the transformation tool
+        run: cargo build --locked --manifest-path ports/horizon/target/mixins-tool/Cargo.toml -p horizon-mixins-cli
+      - name: Apply the native source bundle
+        run: python ports/horizon/tools/stage.py --horizon ports/horizon/target/upstream --mixins ports/horizon/target/mixins-tool
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ports/horizon/target/game -> ../native-cargo
+          key: horizon-windows-67dad0d
+          cache-on-failure: true
+          cache-workspace-crates: true
+      - name: Build the game and its test controls
+        working-directory: ports/horizon/target/game
+        run: |
+          cargo build --locked -p horizon-client --bin horizon-client --no-default-features --profile fast --target-dir ../native-cargo
+          cargo build --locked -p horizon-client-lib --bin horizon-ctl --no-default-features --profile fast --target-dir ../native-cargo
+      - uses: actions/upload-artifact@v6
+        with:
+          name: horizon-windows-validation
+          path: |
+            ports/horizon/target/native-cargo/fast/horizon-client.exe
+            ports/horizon/target/native-cargo/fast/horizon-ctl.exe

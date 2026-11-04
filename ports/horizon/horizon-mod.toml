@@ -5,4 +5,4 @@ description = "Portable inventories for tamed cats and wolves"
 authors = ["byMehd", "Khajiitos"]
 api = "0.2"
 side = "both"
-capabilities = []
+capabilities = ["registries"]
